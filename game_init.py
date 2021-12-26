@@ -92,7 +92,7 @@ def start_screen():
         clock.tick(FPS)
 
 
-class Player(pygame.sprite.Sprite):
+class Tank(pygame.sprite.Sprite):
     def __init__(self, sheet, row, col, pos_x, pos_y):
         super().__init__(all_sprites)
         self.frames = {}
@@ -141,7 +141,7 @@ def check_pressed():
 
 start_screen()
 # main game cycle
-player = Player(load_image('tank_sheet.png'), 1, NUM_OF_FRAMES, 500, 500)
+player = Tank(load_image('tank_sheet.png'), 1, NUM_OF_FRAMES, 500, 500)
 running = True
 while running:
     for event in pygame.event.get():
