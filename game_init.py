@@ -2,6 +2,7 @@ import os
 import sys
 import pygame_widgets
 from pygame_widgets.button import Button
+from math import sin, cos, pi
 import pygame
 
 pygame.init()
@@ -18,6 +19,10 @@ TITLE_COORDINATES = (50, 20)
 
 BUTTON_SIZE = 391, 62
 BUTTON_RADIUS = 10
+
+DELTA_A = 2
+DELTA_S = 3
+NUM_OF_FRAMES = 360 // DELTA_A
 
 
 # screen and clock init
@@ -87,8 +92,56 @@ def start_screen():
         clock.tick(FPS)
 
 
+class Player(pygame.sprite.Sprite):
+    def __init__(self, sheet, row, col, pos_x, pos_y):
+        super().__init__(all_sprites)
+        self.frames = {}
+        self.cut_sheet(sheet, col, row)
+
+        self.a = 0
+        self.image = self.frames[self.a]
+        self.rect = self.image.get_rect()
+        self.rect.centerx = pos_x
+        self.rect.centery = pos_y
+        self.x = pos_x
+        self.y = pos_y
+
+    def move(self, s, a):
+        self.a += a
+        self.x += s * cos(self.a * pi / 180)
+        self.y += -s * sin(self.a * pi / 180)
+
+        self.image = self.frames[(self.a + 360) % 360]
+        self.rect = self.image.get_rect()
+        self.rect.centerx = self.x
+        self.rect.centery = self.y
+
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns, sheet.get_height() // rows)
+        for i in range(rows):
+            for j in range(columns):
+                frame_location = (self.rect.w * j, self.rect.h * i)
+                self.frames[(columns * i + j) * DELTA_A] = sheet.subsurface(pygame.Rect(frame_location, self.rect.size))
+
+
+def check_pressed():
+    ds = 0
+    da = 0
+    if pygame.key.get_pressed()[pygame.K_LEFT]:
+        da += DELTA_A
+    elif pygame.key.get_pressed()[pygame.K_RIGHT]:
+        da -= DELTA_A
+    elif pygame.key.get_pressed()[pygame.K_UP]:
+        ds += DELTA_S
+    elif pygame.key.get_pressed()[pygame.K_DOWN]:
+        ds -= DELTA_S
+    if ds or da:
+        player.move(ds, da)
+
+
 start_screen()
 # main game cycle
+player = Player(load_image('tank_sheet.png'), 1, NUM_OF_FRAMES, 500, 500)
 running = True
 while running:
     for event in pygame.event.get():
@@ -96,6 +149,8 @@ while running:
             running = False
 
     screen.fill(BACKGROUND)
+
+    check_pressed()
 
     all_sprites.draw(screen)
     all_sprites.update()
