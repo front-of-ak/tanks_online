@@ -5,7 +5,7 @@ import pygame_widgets
 
 from pygame_widgets.button import Button
 from math import sin, cos, pi
-# from screen_attributes import screens
+from screen_attributes import screens
 
 pygame.init()
 
@@ -15,9 +15,12 @@ WIDTH = 1080
 HEIGHT = 800
 BACKGROUND = pygame.color.Color('black')
 
-FONT_SIZE = 32
-TEXT_COORD = TEXT_X, TEXT_Y = 40, 300
+MAIN_TEXT_FONT_SIZE = 32
+TITLE_TEXT_FONT_SIZE = 100
+TITLE_TEXT_COORD = TITLE_TEXT_X, TITLE_TEXT_TOP = WIDTH // 2, 20
+TEXT_COORD = MAIN_TEXT_X, MAIN_TEXT_TOP = WIDTH // 2, 300
 TEXT_BG = (242, 232, 201)
+TEXT_COLOR = 'black'
 
 GAME_TITLE = 'WWII: Величайшие танковые битвы'
 TITLE_SIZE = (458, 106)
@@ -53,6 +56,9 @@ def load_image(name, color_key=None):
     except pygame.error as message:
         print('Cannot load image:', name)
         raise SystemExit(message)
+    except FileNotFoundError:
+        fullname = os.path.join('data', 'images', 'intro_screen.jpg')
+        image = pygame.image.load(fullname).convert()
 
     if color_key is not None:
         if color_key == -1:
@@ -78,26 +84,24 @@ def start_screen():
     screen.blit(background, (0, 0))
     logo = pygame.transform.scale(load_image('logo.png', -1), TITLE_SIZE)
     screen.blit(logo, (WIDTH // 2 - logo.get_width() // 2, HEIGHT // 4 - logo.get_height()))
-    start_screen_run = True
 
-    Button(screen,
-           WIDTH // 2 - BUTTON_SIZE[0] // 2, HEIGHT // 2, *BUTTON_SIZE,
-           radius=BUTTON_RADIUS,
-           image=load_image('play_btn.jpg'),
-           onClick=break_start_screen
-           )
+    btn = Button(screen,
+                 WIDTH // 2 - BUTTON_SIZE[0] // 2, HEIGHT // 2, *BUTTON_SIZE,
+                 radius=BUTTON_RADIUS,
+                 image=load_image('play_btn.jpg'),
+                 onClick=break_start_screen
+                 )
 
     while start_screen_run:
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
                 terminate()
-            if not start_screen_run:
-                screen.fill(BACKGROUND)
-                return
         events = pygame.event.get()
         pygame_widgets.update(events)
         pygame.display.flip()
         clock.tick(FPS)
+
+    btn.hide()
 
 
 def check_pressed():
@@ -187,16 +191,20 @@ class Bullet(pygame.sprite.Sprite):
 
 class MiddleScreen:
     def __init__(self, title, text, background_image):
-        self.render_screen(title, text, background_image)
+        self.title = title
+        self.text = text
+        self.background_image = background_image
+        self.render_screen()
 
         self.button_next = Button(screen,
-                                  WIDTH - BUTTON_SIZE[0] - 10, HEIGHT - BUTTON_SIZE[1] - 10, *BUTTON_SIZE,
+                                  WIDTH // 2 - BUTTON_SIZE[0] // 2, HEIGHT // 3 * 2, *BUTTON_SIZE,
                                   radius=BUTTON_RADIUS,
                                   image=load_image('accept.jpg'),
-                                  onClick=lambda: print(1)
+                                  onClick=self.to_level
                                   )
 
-        while True:
+        self.running = True
+        while self.running:
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT:
                     terminate()
@@ -204,50 +212,66 @@ class MiddleScreen:
             pygame_widgets.update(events)
             pygame.display.flip()
             clock.tick(FPS)
+        self.button_next.hide()
 
-    def render_screen(self, title, text, background_image):
-        background = pygame.transform.scale(load_image(background_image), (WIDTH, HEIGHT))
+    def render_screen(self):
+        # bg rendering
+        background = pygame.transform.scale(load_image(self.background_image), (WIDTH, HEIGHT))
         screen.blit(background, (0, 0))
-        font = pygame.font.Font(None, FONT_SIZE)
-        text_coord = TEXT_Y
-        for line in text:
-            string_rendered = font.render(line, True, 'black')
+
+        # title rendering
+        font_title = pygame.font.Font(None, TITLE_TEXT_FONT_SIZE)
+        title_rendered = font_title.render(self.title, True, TEXT_COLOR)
+        intro_rect = title_rendered.get_rect()
+        intro_rect.centerx = TITLE_TEXT_X
+        intro_rect.top = TITLE_TEXT_TOP
+        screen.fill(TEXT_BG, intro_rect)
+        screen.blit(title_rendered, intro_rect)
+
+        # main text rendering
+        font_text = pygame.font.Font(None, MAIN_TEXT_FONT_SIZE)
+        text_coord = MAIN_TEXT_TOP
+        for line in self.text:
+            string_rendered = font_text.render(line, True, TEXT_COLOR)
             intro_rect = string_rendered.get_rect()
+            intro_rect.centerx = MAIN_TEXT_X
             text_coord += 10
             intro_rect.top = text_coord
-            intro_rect.x = TEXT_X
             text_coord += intro_rect.height
             screen.fill(TEXT_BG, intro_rect)
             screen.blit(string_rendered, intro_rect)
 
+    def to_level(self):
+        self.running = False
+
+
+class GameLevel:
+    def __init__(self):
+        pass
+
+    def load_level_map(self):
+        pass
+
+    def load_level(self):
+        pass
+
+    def move_player(self):
+        pass
+
+    def move_enemie(self):
+        pass
+
+    def loop(self):
+        pass
+
 
 start_screen()
 
-# first_screen = MiddleScreen(screens[0]['title'], screens[0]['text'], screens[0]['background'])
+first_screen = MiddleScreen(screens[0]['title'], screens[0]['text'], screens[0]['background'])
+first_level = GameLevel()
 
 # main game cycle
 player_tank = Tank(load_image('tank_sheet.png'), 1, NUM_OF_FRAMES, 500, 500)
 pygame.mouse.set_visible(False)
 
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:  # make bullet if you press left mouse button
-                angle, x, y = player_tank.get_position_and_angle_for_bullet()
-                Bullet(angle, x, y)
-
-    screen.fill(BACKGROUND)
-
-    check_pressed()
-
-    all_sprites.draw(screen)
-    all_sprites.update()
-
-    pygame.display.flip()
-    clock.tick(FPS)
-
-pygame.quit()
 terminate()
