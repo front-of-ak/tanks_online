@@ -5,7 +5,7 @@ import pygame_widgets
 
 from pygame_widgets.button import Button
 from math import sin, cos, pi
-from screen_attributes import screens
+# from screen_attributes import screens
 
 pygame.init()
 
@@ -26,9 +26,10 @@ TITLE_COORDINATES = (50, 20)
 BUTTON_SIZE = 391, 62
 BUTTON_RADIUS = 10
 
-DELTA_A = 2
-DELTA_S = 3
-NUM_OF_FRAMES = 360 // DELTA_A
+DELTA_ANGLE = 2
+DELTA_DISTANCE_FOR_TANK = 3
+DELTA_DISTANCE_FOR_BULLET = 12
+NUM_OF_FRAMES = 360 // DELTA_ANGLE
 
 # screen and clock init
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -36,6 +37,7 @@ clock = pygame.time.Clock()
 pygame.display.set_caption(GAME_TITLE)
 # sprite groups
 all_sprites = pygame.sprite.Group()
+bullets_group = pygame.sprite.Group()
 
 
 def terminate():
@@ -98,6 +100,21 @@ def start_screen():
         clock.tick(FPS)
 
 
+def check_pressed():
+    ds = 0
+    da = 0
+    if pygame.key.get_pressed()[pygame.K_LEFT]:
+        da += DELTA_ANGLE
+    elif pygame.key.get_pressed()[pygame.K_RIGHT]:
+        da -= DELTA_ANGLE
+    elif pygame.key.get_pressed()[pygame.K_UP]:
+        ds += DELTA_DISTANCE_FOR_TANK
+    elif pygame.key.get_pressed()[pygame.K_DOWN]:
+        ds -= DELTA_DISTANCE_FOR_TANK
+    if ds or da:
+        player_tank.move(ds, da)
+
+
 class Tank(pygame.sprite.Sprite):
     def __init__(self, sheet, row, col, pos_x, pos_y):
         super().__init__(all_sprites)
@@ -117,6 +134,7 @@ class Tank(pygame.sprite.Sprite):
         self.x += s * cos(self.angle * pi / 180)
         self.y += -s * sin(self.angle * pi / 180)
 
+    def update(self):
         self.image = self.frames[(self.angle + 360) % 360]
         self.rect = self.image.get_rect()
         self.rect.centerx = self.x
@@ -127,21 +145,44 @@ class Tank(pygame.sprite.Sprite):
         for i in range(rows):
             for j in range(columns):
                 frame_location = (self.rect.w * j, self.rect.h * i)
-                self.frames[(columns * i + j) * DELTA_A] = sheet.subsurface(pygame.Rect(frame_location, self.rect.size))
+                self.frames[(columns * i + j) * DELTA_ANGLE] = \
+                    sheet.subsurface(pygame.Rect(frame_location, self.rect.size))
 
-    def check_pressed(self):
-        ds = 0
-        da = 0
-        if pygame.key.get_pressed()[pygame.K_LEFT]:
-            da += DELTA_A
-        elif pygame.key.get_pressed()[pygame.K_RIGHT]:
-            da -= DELTA_A
-        elif pygame.key.get_pressed()[pygame.K_UP]:
-            ds += DELTA_S
-        elif pygame.key.get_pressed()[pygame.K_DOWN]:
-            ds -= DELTA_S
-        if ds or da:
-            player_tank.move(ds, da)
+    def get_position_and_angle_for_bullet(self):
+        # tried to set prettier start position for bullet but smth went wrong
+        # x_for_bullet = self.x + self.rect.width / 2 * cos(self.angle)
+        # y_for_bullet = self.y + -self.rect.height / 2 * sin(self.angle)
+        return self.angle, self.x, self.y
+
+
+class Bullet(pygame.sprite.Sprite):
+    sheet = load_image('bullet_sheet.png', color_key=-1)
+
+    def __init__(self, angle, pos_x, pos_y):
+        super().__init__(all_sprites, bullets_group)
+
+        self.angle = angle
+        self.set_image_using_angle(angle)
+        self.rect = self.image.get_rect()
+        self.rect.centerx = pos_x
+        self.rect.centery = pos_y
+        self.x = pos_x
+        self.y = pos_y
+
+    def update(self):
+        self.x += DELTA_DISTANCE_FOR_BULLET * cos(self.angle * pi / 180)
+        self.y += -DELTA_DISTANCE_FOR_BULLET * sin(self.angle * pi / 180)
+        self.rect.centerx = self.x
+        self.rect.centery = self.y
+
+        if not self.rect.colliderect(screen.get_rect()):
+            self.kill()
+
+    def set_image_using_angle(self, angle):  # getting bullet image from bullet_sheet
+        num_of_sprite = (angle // DELTA_ANGLE) % NUM_OF_FRAMES
+        self.rect = pygame.Rect(0, 0, self.sheet.get_width() // NUM_OF_FRAMES, self.sheet.get_height() // 1)
+        frame_location = (self.rect.w * num_of_sprite, 0)
+        self.image = self.sheet.subsurface(pygame.Rect(frame_location, self.rect.size))
 
 
 class MiddleScreen:
@@ -181,25 +222,32 @@ class MiddleScreen:
 
 
 start_screen()
-first_screen = MiddleScreen(screens[0]['title'], screens[0]['text'], screens[0]['background'])
+
+# first_screen = MiddleScreen(screens[0]['title'], screens[0]['text'], screens[0]['background'])
 
 # main game cycle
 player_tank = Tank(load_image('tank_sheet.png'), 1, NUM_OF_FRAMES, 500, 500)
-# running = True
-# while running:
-#     for event in pygame.event.get():
-#         if event.type == pygame.QUIT:
-#             running = False
-#
-#     screen.fill(BACKGROUND)
-#
-#     player_tank.check_pressed()
-#
-#     all_sprites.draw(screen)
-#     all_sprites.update()
-#
-#     pygame.display.flip()
-#     clock.tick(FPS)
+pygame.mouse.set_visible(False)
+
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:  # make bullet if you press left mouse button
+                angle, x, y = player_tank.get_position_and_angle_for_bullet()
+                Bullet(angle, x, y)
+
+    screen.fill(BACKGROUND)
+
+    check_pressed()
+
+    all_sprites.draw(screen)
+    all_sprites.update()
+
+    pygame.display.flip()
+    clock.tick(FPS)
 
 pygame.quit()
 terminate()
