@@ -33,6 +33,7 @@ DELTA_ANGLE = 2
 DELTA_DISTANCE_FOR_TANK = 3
 DELTA_DISTANCE_FOR_BULLET = 12
 NUM_OF_FRAMES = 360 // DELTA_ANGLE
+BOOM_FPS = 48
 
 OBJECTS = ['.', '/', '-', '@']
 
@@ -157,10 +158,9 @@ class Tank(pygame.sprite.Sprite):
                     sheet.subsurface(pygame.Rect(frame_location, self.rect.size))
 
     def get_position_and_angle_for_bullet(self):
-        # tried to set prettier start position for bullet but smth went wrong
-        # x_for_bullet = self.x + self.rect.width / 2 * cos(self.angle)
-        # y_for_bullet = self.y + -self.rect.height / 2 * sin(self.angle)
-        return self.angle, self.x, self.y
+        x_for_bullet = self.x + self.rect.width / 2 * cos(self.angle * pi / 180)
+        y_for_bullet = self.y + -self.rect.height / 2 * sin(self.angle * pi / 180)
+        return self.angle, x_for_bullet, y_for_bullet
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -184,6 +184,7 @@ class Bullet(pygame.sprite.Sprite):
         self.rect.centery = self.y
 
         if not self.rect.colliderect(screen.get_rect()):
+            Boom(self.x, self.y)
             self.kill()
 
     def set_image_using_angle(self, angle):  # getting bullet image from bullet_sheet
@@ -191,6 +192,43 @@ class Bullet(pygame.sprite.Sprite):
         self.rect = pygame.Rect(0, 0, self.sheet.get_width() // NUM_OF_FRAMES, self.sheet.get_height() // 1)
         frame_location = (self.rect.w * num_of_sprite, 0)
         self.image = self.sheet.subsurface(pygame.Rect(frame_location, self.rect.size))
+
+
+class Boom(pygame.sprite.Sprite):
+    sheet = load_image('boom_sheet.png', color_key=-1)
+    rows, columns, = 6, 8
+
+    def __init__(self, pos_x, pos_y):
+        super().__init__(all_sprites)
+        self.frames = []
+        self.cut_sheet()
+
+        self.rect.centerx = pos_x
+        self.rect.centery = pos_y
+
+        self.limit = FPS // BOOM_FPS
+        self.counter = 0
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]
+
+    def update(self):
+        self.counter += 1
+        if self.counter == self.limit:
+            self.counter = 0
+            self.cur_frame += 1
+            if self.cur_frame == len(self.frames):
+                self.kill()
+                return
+            self.image = self.frames[self.cur_frame]
+
+    def cut_sheet(self):
+        self.rect = pygame.Rect(0, 0, self.sheet.get_width() // self.columns,
+                                self.sheet.get_height() // self.rows)
+        for i in range(self.rows):
+            for j in range(self.columns):
+                frame_location = (self.rect.w * j, self.rect.h * i)
+                new_image = self.sheet.subsurface(pygame.Rect(frame_location, self.rect.size))
+                self.frames.append(new_image)
 
 
 class MiddleScreen:
