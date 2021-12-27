@@ -34,13 +34,17 @@ DELTA_DISTANCE_FOR_TANK = 3
 DELTA_DISTANCE_FOR_BULLET = 12
 NUM_OF_FRAMES = 360 // DELTA_ANGLE
 
+OBJECTS = ['.', '/', '-', '@']
+
 # screen and clock init
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 pygame.display.set_caption(GAME_TITLE)
+
 # sprite groups
 all_sprites = pygame.sprite.Group()
 bullets_group = pygame.sprite.Group()
+tiles_group = pygame.sprite.Group()
 
 
 def terminate():
@@ -245,15 +249,39 @@ class MiddleScreen:
         self.running = False
 
 
-class GameLevel:
+class Tile(pygame.sprite.Sprite):
+    def __init__(self, tile_type, pos_x, pos_y):
+        pass
+
+
+class Enemie(Tank):
     def __init__(self):
         pass
 
+
+class GameLevel:
+    def __init__(self, level_file):
+        self.level_file = level_file
+        self.map = self.load_level_map()
+        self.enemies = []
+
     def load_level_map(self):
-        pass
+        filename = os.path.join("data", 'level_maps', self.level_file)
+        with open(filename) as map_file:
+            level_map = [line.strip() for line in map_file]
+        max_width = max(map(len, level_map))
+        return list(map(lambda x: x.ljust(max_width, OBJECTS[0]), level_map))
 
     def load_level(self):
-        pass
+        for row in range(len(self.map)):
+            for column in range(len(self.map[row])):
+                if self.map[row][column] == OBJECTS[0]:
+                    Tile('empty', column, row)
+                elif self.map[row][column] == OBJECTS[1]:
+                    Tile('wall', column, row)
+                elif self.map[row][column] == OBJECTS[2]:
+                    Tile('empty', column, row)
+                    self.enemies.append(Enemie(column, row))
 
     def move_player(self):
         pass
@@ -267,8 +295,11 @@ class GameLevel:
 
 start_screen()
 
-first_screen = MiddleScreen(screens[0]['title'], screens[0]['text'], screens[0]['background'])
-first_level = GameLevel()
+first_screen = MiddleScreen(screens[0]['title'],
+                            screens[0]['text'],
+                            screens[0]['background'])
+
+first_level = GameLevel('first_level.txt')
 
 # main game cycle
 player_tank = Tank(load_image('tank_sheet.png'), 1, NUM_OF_FRAMES, 500, 500)
