@@ -13,6 +13,9 @@ pygame.init()
 FPS = 60
 WIDTH = 1080
 HEIGHT = 800
+LEVEL_WIDTH, LEVEL_HEIGHT = 27, 20
+TILE_WIDTH = WIDTH / LEVEL_WIDTH
+TILE_HEIGHT = HEIGHT / LEVEL_HEIGHT
 BACKGROUND = pygame.color.Color('black')
 
 MAIN_TEXT_FONT_SIZE = 32
@@ -80,6 +83,14 @@ def break_start_screen():
 
 
 start_screen_run = True
+TILE_IMAGES = {
+    'wall': load_image('.png'),
+    'empty': load_image('grass.png')
+}
+TANKS_IMAGES = {
+    'player': load_image('tank_sheet.png'),
+    'enemy': load_image('enemy_tank_sheet.png')
+}
 
 
 # function for start screen
@@ -289,12 +300,22 @@ class MiddleScreen:
 
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
-        pass
+        super().__init__(tiles_group, all_sprites)
+        self.image = TILE_IMAGES[tile_type]
+        self.rect = self.image.get_rect().move(
+            TILE_WIDTH * pos_x, TILE_HEIGHT * pos_y)
 
 
-class Enemie(Tank):
-    def __init__(self):
-        pass
+class Enemy(Tank):
+    def __init__(self, col, row):
+        pos_x, pos_y = self.func(row, col)
+
+        super().__init__(TANKS_IMAGES['enemy'], 1, NUM_OF_FRAMES, pos_x, pos_y)
+
+    def func(self, row, col):
+        # function makes from col and row of enemy on the map his position on screen
+        # I just made the template
+        return None, None
 
 
 class GameLevel:
@@ -319,12 +340,12 @@ class GameLevel:
                     Tile('wall', column, row)
                 elif self.map[row][column] == OBJECTS[2]:
                     Tile('empty', column, row)
-                    self.enemies.append(Enemie(column, row))
+                    self.enemies.append(Enemy(column, row))
 
     def move_player(self):
         pass
 
-    def move_enemie(self):
+    def move_enemy(self):
         pass
 
     def loop(self):
@@ -340,7 +361,7 @@ first_screen = MiddleScreen(screens[0]['title'],
 first_level = GameLevel('first_level.txt')
 
 # main game cycle
-player_tank = Tank(load_image('tank_sheet.png'), 1, NUM_OF_FRAMES, 500, 500)
+player_tank = Tank(TANKS_IMAGES['player'], 1, NUM_OF_FRAMES, 500, 500)
 pygame.mouse.set_visible(False)
 
 terminate()
