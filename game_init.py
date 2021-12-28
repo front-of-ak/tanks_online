@@ -48,7 +48,8 @@ pygame.display.set_caption(GAME_TITLE)
 # sprite groups
 all_sprites = pygame.sprite.Group()
 bullets_group = pygame.sprite.Group()
-tiles_group = pygame.sprite.Group()
+houses_group = pygame.sprite.Group()
+tank_group = pygame.sprite.Group()
 
 
 def terminate():
@@ -84,14 +85,14 @@ def break_start_screen():
 
 start_screen_run = True
 TILE_IMAGES = {
-    'wall': load_image('.png'),
+    'wall': load_image('house.png'),
     'empty': load_image('grass.png')
 }
 TANKS_IMAGES = {
-    'player': load_image('tank_sheet.png'),
-    'enemy': load_image('enemy_tank_sheet.png')
+    'player': load_image('tank_sheet.png', -1),
+    'enemy': load_image('enemy_tank_sheet.png', -1)
 }
-
+SHEET = load_image('boom_sheet.png', color_key=-1)
 
 # function for start screen
 def start_screen():
@@ -120,24 +121,9 @@ def start_screen():
     btn.hide()
 
 
-def check_pressed():
-    ds = 0
-    da = 0
-    if pygame.key.get_pressed()[pygame.K_LEFT]:
-        da += DELTA_ANGLE
-    elif pygame.key.get_pressed()[pygame.K_RIGHT]:
-        da -= DELTA_ANGLE
-    elif pygame.key.get_pressed()[pygame.K_UP]:
-        ds += DELTA_DISTANCE_FOR_TANK
-    elif pygame.key.get_pressed()[pygame.K_DOWN]:
-        ds -= DELTA_DISTANCE_FOR_TANK
-    if ds or da:
-        player_tank.move(ds, da)
-
-
 class Tank(pygame.sprite.Sprite):
     def __init__(self, sheet, row, col, pos_x, pos_y):
-        super().__init__(all_sprites)
+        super().__init__(tank_group, all_sprites)
         self.frames = {}
         self.cut_sheet(sheet, col, row)
 
@@ -149,10 +135,28 @@ class Tank(pygame.sprite.Sprite):
         self.x = pos_x
         self.y = pos_y
 
-    def move(self, s, a):
+    def move(self, s, a, move_enable_string='00'):
         self.angle += a
-        self.x += s * cos(self.angle * pi / 180)
-        self.y += -s * sin(self.angle * pi / 180)
+        if move_enable_string == '00':
+            self.x += s * cos(self.angle * pi / 180)
+            self.y += -s * sin(self.angle * pi / 180)
+        if move_enable_string == '-0':
+            if self.x <= self.x + s * cos(self.angle * pi / 180):
+                self.x += s * cos(self.angle * pi / 180)
+            self.y += -s * sin(self.angle * pi / 180)
+        if move_enable_string == '+0':
+            if self.x >= self.x + s * cos(self.angle * pi / 180):
+                self.x += s * cos(self.angle * pi / 180)
+            self.y += -s * sin(self.angle * pi / 180)
+        if move_enable_string == '0-':
+            if self.y <= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
+            self.x += s * cos(self.angle * pi / 180)
+
+        if move_enable_string == '0+':
+            if self.y >= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
+            self.x += s * cos(self.angle * pi / 180)
 
     def update(self):
         self.image = self.frames[(self.angle + 360) % 360]
@@ -194,7 +198,7 @@ class Bullet(pygame.sprite.Sprite):
         self.rect.centerx = self.x
         self.rect.centery = self.y
 
-        if not self.rect.colliderect(screen.get_rect()):
+        if not self.rect.colliderect(screen.get_rect()) or self.x > WIDTH or self.y > HEIGHT:
             Boom(self.x, self.y)
             self.kill()
 
@@ -206,7 +210,6 @@ class Bullet(pygame.sprite.Sprite):
 
 
 class Boom(pygame.sprite.Sprite):
-    sheet = load_image('boom_sheet.png', color_key=-1)
     rows, columns, = 6, 8
 
     def __init__(self, pos_x, pos_y):
@@ -233,12 +236,12 @@ class Boom(pygame.sprite.Sprite):
             self.image = self.frames[self.cur_frame]
 
     def cut_sheet(self):
-        self.rect = pygame.Rect(0, 0, self.sheet.get_width() // self.columns,
-                                self.sheet.get_height() // self.rows)
+        self.rect = pygame.Rect(0, 0, SHEET.get_width() // self.columns,
+                                SHEET.get_height() // self.rows)
         for i in range(self.rows):
             for j in range(self.columns):
                 frame_location = (self.rect.w * j, self.rect.h * i)
-                new_image = self.sheet.subsurface(pygame.Rect(frame_location, self.rect.size))
+                new_image = SHEET.subsurface(pygame.Rect(frame_location, self.rect.size))
                 self.frames.append(new_image)
 
 
@@ -299,30 +302,49 @@ class MiddleScreen:
 
 
 class Tile(pygame.sprite.Sprite):
-    def __init__(self, tile_type, pos_x, pos_y):
-        super().__init__(tiles_group, all_sprites)
+    def __init__(self, tile_type, pos_x, pos_y, *groups):
+        super().__init__(all_sprites, *groups)
         self.image = TILE_IMAGES[tile_type]
         self.rect = self.image.get_rect().move(
             TILE_WIDTH * pos_x, TILE_HEIGHT * pos_y)
 
 
+class House(Tile):
+    def __init__(self, tile_type, pos_x, pos_y):
+        super().__init__(tile_type, pos_x, pos_y, houses_group)
+        self.mask = pygame.mask.from_surface(TILE_IMAGES[tile_type])
+
+
+def position_count(column, row):
+    pos_x = column * TILE_WIDTH - TILE_WIDTH // 2
+    pos_y = row * TILE_HEIGHT - TILE_HEIGHT // 2
+    return pos_x, pos_y
+
+
 class Enemy(Tank):
     def __init__(self, col, row):
-        pos_x, pos_y = self.func(row, col)
-
+        pos_x, pos_y = position_count(col, row)
         super().__init__(TANKS_IMAGES['enemy'], 1, NUM_OF_FRAMES, pos_x, pos_y)
 
-    def func(self, row, col):
-        # function makes from col and row of enemy on the map his position on screen
-        # I just made the template
-        return None, None
+
+class Player(Tank):
+    def __init__(self, col, row):
+        pos_x, pos_y = position_count(col, row)
+        super().__init__(TANKS_IMAGES['player'], 1, NUM_OF_FRAMES, pos_x, pos_y)
 
 
 class GameLevel:
     def __init__(self, level_file):
+        self.running = True
         self.level_file = level_file
-        self.map = self.load_level_map()
         self.enemies = []
+        self.houses = []
+
+        pygame.mouse.set_visible(False)
+
+        self.map = self.load_level_map()
+        self.load_level()
+        self.loop()
 
     def load_level_map(self):
         filename = os.path.join("data", 'level_maps', self.level_file)
@@ -337,19 +359,74 @@ class GameLevel:
                 if self.map[row][column] == OBJECTS[0]:
                     Tile('empty', column, row)
                 elif self.map[row][column] == OBJECTS[1]:
-                    Tile('wall', column, row)
+                    self.houses.append(House('wall', column, row))
                 elif self.map[row][column] == OBJECTS[2]:
                     Tile('empty', column, row)
                     self.enemies.append(Enemy(column, row))
+                elif self.map[row][column] == OBJECTS[3]:
+                    Tile('empty', column, row)
+                    self.player = Player(column, row)
 
-    def move_player(self):
-        pass
+    def move_player(self, ds, da):
+        if not pygame.sprite.spritecollideany(self.player, houses_group):
+            self.player.move(ds, da)
+        else:
+            collided_house = pygame.sprite.spritecollideany(self.player, houses_group)
+            if abs(self.player.rect.centerx - collided_house.rect.centerx) > \
+                    abs(self.player.rect.centery - collided_house.rect.centery):
+                if self.player.rect.centerx - collided_house.rect.centerx > 0:
+                    self.player.move(ds, da, '-0')
+                elif self.player.rect.centerx - collided_house.rect.centerx < 0:
+                    self.player.move(ds, da, '+0')
+            elif abs(self.player.rect.centerx - collided_house.rect.centerx) < \
+                    abs(self.player.rect.centery - collided_house.rect.centery):
+                if self.player.rect.centery - collided_house.rect.centery > 0:
+                    self.player.move(ds, da, '0-')
+                elif self.player.rect.centery - collided_house.rect.centery < 0:
+                    self.player.move(ds, da, '0+')
+            else:
+                self.player.move(ds, da, '00')
 
     def move_enemy(self):
         pass
 
+    def shoot(self, event, tank):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:  # make bullet if you press left mouse button
+                angle, x, y = tank.get_position_and_angle_for_bullet()
+                Bullet(angle, x, y)
+
+    def check_pressed(self):
+        ds = 0
+        da = 0
+        if pygame.key.get_pressed()[pygame.K_LEFT]:
+            da += DELTA_ANGLE
+        elif pygame.key.get_pressed()[pygame.K_RIGHT]:
+            da -= DELTA_ANGLE
+        elif pygame.key.get_pressed()[pygame.K_UP]:
+            ds += DELTA_DISTANCE_FOR_TANK
+        elif pygame.key.get_pressed()[pygame.K_DOWN]:
+            ds -= DELTA_DISTANCE_FOR_TANK
+        if ds or da:
+            self.move_player(ds, da)
+        self.move_enemy()
+
     def loop(self):
-        pass
+        while self.running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                self.shoot(event, self.player)
+                for i in self.enemies:
+                    self.shoot(event, i)
+            screen.fill(BACKGROUND)
+            self.check_pressed()
+
+            all_sprites.draw(screen)
+            all_sprites.update()
+            tank_group.draw(screen)
+            pygame.display.flip()
+            clock.tick(FPS)
 
 
 start_screen()
@@ -359,9 +436,4 @@ first_screen = MiddleScreen(screens[0]['title'],
                             screens[0]['background'])
 
 first_level = GameLevel('first_level.txt')
-
-# main game cycle
-player_tank = Tank(TANKS_IMAGES['player'], 1, NUM_OF_FRAMES, 500, 500)
-pygame.mouse.set_visible(False)
-
 terminate()
