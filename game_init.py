@@ -49,11 +49,14 @@ pygame.display.set_caption(GAME_TITLE)
 all_sprites = pygame.sprite.Group()
 bullets_group = pygame.sprite.Group()
 houses_group = pygame.sprite.Group()
+
 top_borders_group = pygame.sprite.Group()
 left_borders_group = pygame.sprite.Group()
 right_borders_group = pygame.sprite.Group()
 bottom_borders_group = pygame.sprite.Group()
-tank_group = pygame.sprite.Group()
+
+player_group = pygame.sprite.Group()
+enemies_group = pygame.sprite.Group()
 
 
 def terminate():
@@ -127,8 +130,8 @@ def start_screen():
 
 
 class Tank(pygame.sprite.Sprite):
-    def __init__(self, sheet, row, col, pos_x, pos_y):
-        super().__init__(tank_group, all_sprites)
+    def __init__(self, sheet, row, col, pos_x, pos_y, *groups):
+        super().__init__(all_sprites, *groups)
         self.frames = {}
         self.cut_sheet(sheet, col, row)
 
@@ -354,16 +357,16 @@ class Border(pygame.sprite.Sprite):
         super().__init__(all_sprites, group_type)
         if group_type == top_borders_group:
             self.image = pygame.Surface([x2 - x1, 1])
-            self.rect = pygame.Rect(x1, y1, x2, 1)
+            self.rect = pygame.Rect(x1 + 1, y1, x2 - 2, 1)
         if group_type == left_borders_group:
             self.image = pygame.Surface([1, y2 - y1])
-            self.rect = pygame.Rect(x1, y1, 1, y2)
+            self.rect = pygame.Rect(x1, y1 + 1, 1, y2 - 2)
         if group_type == right_borders_group:
             self.image = pygame.Surface([1, y2 - y1])
-            self.rect = pygame.Rect(x1, y1, 1, y2)
+            self.rect = pygame.Rect(x1, y1 + 1, 1, y2 - 2)
         if group_type == bottom_borders_group:
             self.image = pygame.Surface([x2 - x1, 1])
-            self.rect = pygame.Rect(x1, y1, x2, 1)
+            self.rect = pygame.Rect(x1 + 1, y1, x2 - 2, 1)
         self.mask = pygame.mask.from_surface(self.image)
 
 
@@ -391,13 +394,13 @@ def position_count(column, row):
 class Enemy(Tank):
     def __init__(self, col, row):
         pos_x, pos_y = position_count(col, row)
-        super().__init__(TANKS_IMAGES['enemy'], 1, NUM_OF_FRAMES, pos_x, pos_y)
+        super().__init__(TANKS_IMAGES['enemy'], 1, NUM_OF_FRAMES, pos_x, pos_y, enemies_group)
 
 
 class Player(Tank):
     def __init__(self, col, row):
         pos_x, pos_y = position_count(col, row)
-        super().__init__(TANKS_IMAGES['player'], 1, NUM_OF_FRAMES, pos_x, pos_y)
+        super().__init__(TANKS_IMAGES['player'], 1, NUM_OF_FRAMES, pos_x, pos_y, player_group)
 
 
 class GameLevel:
@@ -519,10 +522,11 @@ class GameLevel:
                     self.shoot(event, i)
             screen.fill(BACKGROUND)
             self.check_pressed()
-
+            enemies_group.draw(screen)
             all_sprites.draw(screen)
             all_sprites.update()
-            tank_group.draw(screen)
+            player_group.draw(screen)
+
             pygame.display.flip()
             clock.tick(FPS)
 
