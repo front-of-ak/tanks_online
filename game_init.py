@@ -16,7 +16,7 @@ HEIGHT = 800
 LEVEL_WIDTH, LEVEL_HEIGHT = 27, 20
 TILE_WIDTH = WIDTH / LEVEL_WIDTH
 TILE_HEIGHT = HEIGHT / LEVEL_HEIGHT
-BACKGROUND = pygame.color.Color('black')
+BACKGROUND = pygame.color.Color('white')
 
 MAIN_TEXT_FONT_SIZE = 32
 TITLE_TEXT_FONT_SIZE = 100
@@ -38,7 +38,7 @@ DELTA_DISTANCE_FOR_BULLET = 12
 NUM_OF_FRAMES = 360 // DELTA_ANGLE
 BOOM_FPS = 48
 
-OBJECTS = ['.', '/', '-', '@']
+OBJECTS = {'empty': '.', 'wall': '/', 'enemy': '-', 'player': '@'}
 
 # screen and clock init
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -145,7 +145,8 @@ class Tank(pygame.sprite.Sprite):
 
     def move(self, s, a, move_enable_string='00'):
         self.angle += a
-        if move_enable_string == '00':
+        print(move_enable_string)
+        if move_enable_string in '00':
             self.x += s * cos(self.angle * pi / 180)
             self.y += -s * sin(self.angle * pi / 180)
         if move_enable_string == '+0':
@@ -157,10 +158,10 @@ class Tank(pygame.sprite.Sprite):
                 self.y += -s * sin(self.angle * pi / 180)
             self.x += s * cos(self.angle * pi / 180)
         if move_enable_string == '++':
-            if self.x >= self.x + s * cos(self.angle * pi / 180) and \
-                    self.y >= self.y + -s * sin(self.angle * pi / 180):
-                self.y += -s * sin(self.angle * pi / 180)
+            if self.x >= self.x + s * cos(self.angle * pi / 180):
                 self.x += s * cos(self.angle * pi / 180)
+            if self.y >= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
         if move_enable_string == '-0':
             if self.x <= self.x + s * cos(self.angle * pi / 180):
                 self.x += s * cos(self.angle * pi / 180)
@@ -168,10 +169,10 @@ class Tank(pygame.sprite.Sprite):
         if move_enable_string == 'n0':
             self.y += -s * sin(self.angle * pi / 180)
         if move_enable_string == '-+':
-            if self.x <= self.x + s * cos(self.angle * pi / 180) and \
-                    self.y >= self.y + -s * sin(self.angle * pi / 180):
-                self.y += -s * sin(self.angle * pi / 180)
+            if self.x <= self.x + s * cos(self.angle * pi / 180):
                 self.x += s * cos(self.angle * pi / 180)
+            if self.y >= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
         if move_enable_string == 'n+':
             if self.y >= self.y + -s * sin(self.angle * pi / 180):
                 self.y += -s * sin(self.angle * pi / 180)
@@ -180,20 +181,20 @@ class Tank(pygame.sprite.Sprite):
                 self.y += -s * sin(self.angle * pi / 180)
             self.x += s * cos(self.angle * pi / 180)
         if move_enable_string == '+-':
-            if self.x >= self.x + s * cos(self.angle * pi / 180) and \
-                    self.y <= self.y + -s * sin(self.angle * pi / 180):
-                self.y += -s * sin(self.angle * pi / 180)
+            if self.x >= self.x + s * cos(self.angle * pi / 180):
                 self.x += s * cos(self.angle * pi / 180)
+            if self.y <= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
         if move_enable_string == '0n':
             self.x += s * cos(self.angle * pi / 180)
         if move_enable_string == '+n':
             if self.x >= self.x + s * cos(self.angle * pi / 180):
                 self.x += s * cos(self.angle * pi / 180)
         if move_enable_string == '--':
-            if self.x <= self.x + s * cos(self.angle * pi / 180) and \
-                    self.y <= self.y + -s * sin(self.angle * pi / 180):
-                self.y += -s * sin(self.angle * pi / 180)
+            if self.x <= self.x + s * cos(self.angle * pi / 180):
                 self.x += s * cos(self.angle * pi / 180)
+            if self.y <= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
         if move_enable_string == 'n-':
             if self.y <= self.y + -s * sin(self.angle * pi / 180):
                 self.y += -s * sin(self.angle * pi / 180)
@@ -357,32 +358,36 @@ class Border(pygame.sprite.Sprite):
         super().__init__(all_sprites, group_type)
         if group_type == top_borders_group:
             self.image = pygame.Surface([x2 - x1, 1])
-            self.rect = pygame.Rect(x1 + 1, y1, x2 - 2, 1)
+            self.rect = pygame.Rect(x1, y1, x2, y2)
         if group_type == left_borders_group:
             self.image = pygame.Surface([1, y2 - y1])
-            self.rect = pygame.Rect(x1, y1 + 1, 1, y2 - 2)
+            self.rect = pygame.Rect(x1, y1, x2, y2)
         if group_type == right_borders_group:
             self.image = pygame.Surface([1, y2 - y1])
-            self.rect = pygame.Rect(x1, y1 + 1, 1, y2 - 2)
+            self.rect = pygame.Rect(x1, y1, x2, y2)
         if group_type == bottom_borders_group:
             self.image = pygame.Surface([x2 - x1, 1])
-            self.rect = pygame.Rect(x1 + 1, y1, x2 - 2, 1)
+            self.rect = pygame.Rect(x1, y1, x2, y2)
         self.mask = pygame.mask.from_surface(self.image)
 
 
 class House(Tile):
-    def __init__(self, tile_type, pos_x, pos_y):
+    def __init__(self, tile_type, pos_x, pos_y, borders):
         super().__init__(tile_type, pos_x, pos_y, houses_group)
         pos_x *= TILE_WIDTH
         pos_y *= TILE_HEIGHT
-        self.top_border = Border(pos_x, pos_y, pos_x + TILE_WIDTH, pos_y, top_borders_group)
-        self.left_border = Border(pos_x, pos_y, pos_x, pos_y + TILE_HEIGHT, left_borders_group)
-        self.bottom_border = Border(pos_x, pos_y + TILE_HEIGHT,
-                                    pos_x + TILE_WIDTH, pos_y + TILE_HEIGHT,
-                                    bottom_borders_group)
-        self.right_border = Border(pos_x + TILE_WIDTH, pos_y,
-                                   pos_x + TILE_WIDTH, pos_y + TILE_HEIGHT,
-                                   right_borders_group)
+        if borders['top_border']:
+            self.top_border = Border(pos_x, pos_y, pos_x + TILE_WIDTH, pos_y, top_borders_group)
+        if borders['left_border']:
+            self.left_border = Border(pos_x, pos_y, pos_x, pos_y + TILE_HEIGHT, left_borders_group)
+        if borders['bottom_border']:
+            self.bottom_border = Border(pos_x, pos_y + TILE_HEIGHT,
+                                        pos_x + TILE_WIDTH, pos_y + TILE_HEIGHT,
+                                        bottom_borders_group)
+        if borders['right_border']:
+            self.right_border = Border(pos_x + TILE_WIDTH, pos_y,
+                                       pos_x + TILE_WIDTH, pos_y + TILE_HEIGHT,
+                                       right_borders_group)
 
 
 def position_count(column, row):
@@ -409,6 +414,7 @@ class GameLevel:
         self.level_file = level_file
         self.enemies = []
         self.houses = []
+        self.player = None
 
         pygame.mouse.set_visible(False)
 
@@ -421,19 +427,37 @@ class GameLevel:
         with open(filename) as map_file:
             level_map = [line.strip() for line in map_file]
         max_width = max(map(len, level_map))
-        return list(map(lambda x: x.ljust(max_width, OBJECTS[0]), level_map))
+        return list(map(lambda x: x.ljust(max_width, OBJECTS['empty']), level_map))
+
+    def get_borders_dict(self, row, column):
+        borders = {
+            'bottom_border': True,
+            'top_border': True,
+            'right_border': True,
+            'left_border': True
+        }
+        if row != len(self.map) - 1 and self.map[row + 1][column] == OBJECTS['wall']:
+            borders['bottom_border'] = False
+        if row != 0 and self.map[row - 1][column] == OBJECTS['wall']:
+            borders['top_border'] = False
+        if column != len(self.map[row]) - 1 and self.map[row][column + 1] == OBJECTS['wall']:
+            borders['right_border'] = False
+        if column != 0 and self.map[row][column - 1] == OBJECTS['wall']:
+            borders['left_border'] = False
+        return borders
 
     def load_level(self):
         for row in range(len(self.map)):
             for column in range(len(self.map[row])):
-                if self.map[row][column] == OBJECTS[0]:
+                if self.map[row][column] == OBJECTS['empty']:
                     Tile('empty', column, row)
-                elif self.map[row][column] == OBJECTS[1]:
-                    self.houses.append(House('wall', column, row))
-                elif self.map[row][column] == OBJECTS[2]:
+                elif self.map[row][column] == OBJECTS['wall']:
+                    borders = self.get_borders_dict(row, column)
+                    self.houses.append(House('wall', column, row, borders))
+                elif self.map[row][column] == OBJECTS['enemy']:
                     Tile('empty', column, row)
                     self.enemies.append(Enemy(column, row))
-                elif self.map[row][column] == OBJECTS[3]:
+                elif self.map[row][column] == OBJECTS['player']:
                     Tile('empty', column, row)
                     self.player = Player(column, row)
 
