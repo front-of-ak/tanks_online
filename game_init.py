@@ -49,6 +49,10 @@ pygame.display.set_caption(GAME_TITLE)
 all_sprites = pygame.sprite.Group()
 bullets_group = pygame.sprite.Group()
 houses_group = pygame.sprite.Group()
+top_borders_group = pygame.sprite.Group()
+left_borders_group = pygame.sprite.Group()
+right_borders_group = pygame.sprite.Group()
+bottom_borders_group = pygame.sprite.Group()
 tank_group = pygame.sprite.Group()
 
 
@@ -93,6 +97,7 @@ TANKS_IMAGES = {
     'enemy': load_image('enemy_tank_sheet.png', -1)
 }
 SHEET = load_image('boom_sheet.png', color_key=-1)
+
 
 # function for start screen
 def start_screen():
@@ -140,23 +145,58 @@ class Tank(pygame.sprite.Sprite):
         if move_enable_string == '00':
             self.x += s * cos(self.angle * pi / 180)
             self.y += -s * sin(self.angle * pi / 180)
-        if move_enable_string == '-0':
-            if self.x <= self.x + s * cos(self.angle * pi / 180):
-                self.x += s * cos(self.angle * pi / 180)
-            self.y += -s * sin(self.angle * pi / 180)
         if move_enable_string == '+0':
             if self.x >= self.x + s * cos(self.angle * pi / 180):
                 self.x += s * cos(self.angle * pi / 180)
             self.y += -s * sin(self.angle * pi / 180)
-        if move_enable_string == '0-':
-            if self.y <= self.y + -s * sin(self.angle * pi / 180):
-                self.y += -s * sin(self.angle * pi / 180)
-            self.x += s * cos(self.angle * pi / 180)
-
         if move_enable_string == '0+':
             if self.y >= self.y + -s * sin(self.angle * pi / 180):
                 self.y += -s * sin(self.angle * pi / 180)
             self.x += s * cos(self.angle * pi / 180)
+        if move_enable_string == '++':
+            if self.x >= self.x + s * cos(self.angle * pi / 180) and \
+                    self.y >= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
+                self.x += s * cos(self.angle * pi / 180)
+        if move_enable_string == '-0':
+            if self.x <= self.x + s * cos(self.angle * pi / 180):
+                self.x += s * cos(self.angle * pi / 180)
+            self.y += -s * sin(self.angle * pi / 180)
+        if move_enable_string == 'n0':
+            self.y += -s * sin(self.angle * pi / 180)
+        if move_enable_string == '-+':
+            if self.x <= self.x + s * cos(self.angle * pi / 180) and \
+                    self.y >= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
+                self.x += s * cos(self.angle * pi / 180)
+        if move_enable_string == 'n+':
+            if self.y >= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
+        if move_enable_string == '0-':
+            if self.y <= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
+            self.x += s * cos(self.angle * pi / 180)
+        if move_enable_string == '+-':
+            if self.x >= self.x + s * cos(self.angle * pi / 180) and \
+                    self.y <= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
+                self.x += s * cos(self.angle * pi / 180)
+        if move_enable_string == '0n':
+            self.x += s * cos(self.angle * pi / 180)
+        if move_enable_string == '+n':
+            if self.x >= self.x + s * cos(self.angle * pi / 180):
+                self.x += s * cos(self.angle * pi / 180)
+        if move_enable_string == '--':
+            if self.x <= self.x + s * cos(self.angle * pi / 180) and \
+                    self.y <= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
+                self.x += s * cos(self.angle * pi / 180)
+        if move_enable_string == 'n-':
+            if self.y <= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
+        if move_enable_string == '-n':
+            if self.x <= self.x + s * cos(self.angle * pi / 180):
+                self.x += s * cos(self.angle * pi / 180)
 
     def update(self):
         self.image = self.frames[(self.angle + 360) % 360]
@@ -309,10 +349,37 @@ class Tile(pygame.sprite.Sprite):
             TILE_WIDTH * pos_x, TILE_HEIGHT * pos_y)
 
 
+class Border(pygame.sprite.Sprite):
+    def __init__(self, x1, y1, x2, y2, group_type):
+        super().__init__(all_sprites, group_type)
+        if group_type == top_borders_group:
+            self.image = pygame.Surface([x2 - x1, 1])
+            self.rect = pygame.Rect(x1, y1, x2, 1)
+        if group_type == left_borders_group:
+            self.image = pygame.Surface([1, y2 - y1])
+            self.rect = pygame.Rect(x1, y1, 1, y2)
+        if group_type == right_borders_group:
+            self.image = pygame.Surface([1, y2 - y1])
+            self.rect = pygame.Rect(x1, y1, 1, y2)
+        if group_type == bottom_borders_group:
+            self.image = pygame.Surface([x2 - x1, 1])
+            self.rect = pygame.Rect(x1, y1, x2, 1)
+        self.mask = pygame.mask.from_surface(self.image)
+
+
 class House(Tile):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tile_type, pos_x, pos_y, houses_group)
-        self.mask = pygame.mask.from_surface(TILE_IMAGES[tile_type])
+        pos_x *= TILE_WIDTH
+        pos_y *= TILE_HEIGHT
+        self.top_border = Border(pos_x, pos_y, pos_x + TILE_WIDTH, pos_y, top_borders_group)
+        self.left_border = Border(pos_x, pos_y, pos_x, pos_y + TILE_HEIGHT, left_borders_group)
+        self.bottom_border = Border(pos_x, pos_y + TILE_HEIGHT,
+                                    pos_x + TILE_WIDTH, pos_y + TILE_HEIGHT,
+                                    bottom_borders_group)
+        self.right_border = Border(pos_x + TILE_WIDTH, pos_y,
+                                   pos_x + TILE_WIDTH, pos_y + TILE_HEIGHT,
+                                   right_borders_group)
 
 
 def position_count(column, row):
@@ -368,24 +435,55 @@ class GameLevel:
                     self.player = Player(column, row)
 
     def move_player(self, ds, da):
-        if not pygame.sprite.spritecollideany(self.player, houses_group):
-            self.player.move(ds, da)
-        else:
-            collided_house = pygame.sprite.spritecollideany(self.player, houses_group)
-            if abs(self.player.rect.centerx - collided_house.rect.centerx) > \
-                    abs(self.player.rect.centery - collided_house.rect.centery):
-                if self.player.rect.centerx - collided_house.rect.centerx > 0:
-                    self.player.move(ds, da, '-0')
-                elif self.player.rect.centerx - collided_house.rect.centerx < 0:
-                    self.player.move(ds, da, '+0')
-            elif abs(self.player.rect.centerx - collided_house.rect.centerx) < \
-                    abs(self.player.rect.centery - collided_house.rect.centery):
-                if self.player.rect.centery - collided_house.rect.centery > 0:
-                    self.player.move(ds, da, '0-')
-                elif self.player.rect.centery - collided_house.rect.centery < 0:
-                    self.player.move(ds, da, '0+')
-            else:
-                self.player.move(ds, da, '00')
+        move_up = True
+        move_down = True
+        move_left = True
+        move_right = True
+        for i in top_borders_group:
+            if pygame.sprite.collide_mask(self.player, i):
+                move_down = False
+        for i in bottom_borders_group:
+            if pygame.sprite.collide_mask(self.player, i):
+                move_up = False
+        for i in right_borders_group:
+            if pygame.sprite.collide_mask(self.player, i):
+                move_left = False
+        for i in left_borders_group:
+            if pygame.sprite.collide_mask(self.player, i):
+                move_right = False
+
+        if move_up and move_left and move_down and move_right:
+            self.player.move(ds, da, '00')
+        elif move_up and move_left and move_down and not move_right:
+            self.player.move(ds, da, '+0')
+        elif move_up and move_left and not move_down and move_right:
+            self.player.move(ds, da, '0+')
+        elif move_up and move_left and not move_down and not move_right:
+            self.player.move(ds, da, '++')
+        elif move_up and not move_left and move_down and move_right:
+            self.player.move(ds, da, '-0')
+        elif move_up and not move_left and move_down and not move_right:
+            self.player.move(ds, da, 'n0')
+        elif move_up and not move_left and not move_down and move_right:
+            self.player.move(ds, da, '-+')
+        elif move_up and not move_left and not move_down and not move_right:
+            self.player.move(ds, da, 'n+')
+        elif not move_up and move_left and move_down and move_right:
+            self.player.move(ds, da, '0-')
+        elif not move_up and move_left and move_down and not move_right:
+            self.player.move(ds, da, '+-')
+        elif not move_up and move_left and not move_down and move_right:
+            self.player.move(ds, da, '0n')
+        elif not move_up and move_left and not move_down and not move_right:
+            self.player.move(ds, da, '+n')
+        elif not move_up and not move_left and move_down and move_right:
+            self.player.move(ds, da, '--')
+        elif not move_up and not move_left and move_down and not move_right:
+            self.player.move(ds, da, 'n-')
+        elif not move_up and not move_left and not move_down and move_right:
+            self.player.move(ds, da, '-n')
+        elif not move_up and not move_left and not move_down and not move_right:
+            self.player.move(ds, da, 'nn')
 
     def move_enemy(self):
         pass
