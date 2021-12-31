@@ -37,6 +37,7 @@ DELTA_DISTANCE_FOR_TANK = 3
 DELTA_DISTANCE_FOR_BULLET = 12
 NUM_OF_FRAMES = 360 // DELTA_ANGLE
 BOOM_FPS = 48
+RELOAD_TIME = 2
 
 OBJECTS = {'empty': '.', 'wall': '/', 'enemy': '-', 'player': '@'}
 
@@ -44,6 +45,16 @@ OBJECTS = {'empty': '.', 'wall': '/', 'enemy': '-', 'player': '@'}
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 pygame.display.set_caption(GAME_TITLE)
+
+# music init
+back_sound = pygame.mixer.Sound(file='data/sounds/malinovka.wav')
+shot_sound = pygame.mixer.Sound(file='data/sounds/shot.wav')
+player_tank_dead_sound = pygame.mixer.Sound(file='data/sounds/player_tank_dead.wav')
+penetration_sound = pygame.mixer.Sound(file='data/sounds/penetration.wav')
+no_penetration_sound = pygame.mixer.Sound(file='data/sounds/no_penetration.wav')
+
+shot_sound.set_volume(0.3)
+back_sound.play(loops=-1, fade_ms=100)
 
 # sprite groups
 all_sprites = pygame.sprite.Group()
@@ -142,10 +153,12 @@ class Tank(pygame.sprite.Sprite):
         self.rect.centery = pos_y
         self.x = pos_x
         self.y = pos_y
+        self.max_counter = RELOAD_TIME * FPS
+        self.counter = 0
+        self.is_reloaded = True
 
     def move(self, s, a, move_enable_string='00'):
         self.angle += a
-        print(move_enable_string)
         if move_enable_string in '00':
             self.x += s * cos(self.angle * pi / 180)
             self.y += -s * sin(self.angle * pi / 180)
@@ -203,6 +216,11 @@ class Tank(pygame.sprite.Sprite):
                 self.x += s * cos(self.angle * pi / 180)
 
     def update(self):
+        if not self.is_reloaded:
+            self.counter += 1
+        if self.counter == self.max_counter:
+            self.is_reloaded = True
+            self.counter = 0
         self.image = self.frames[(self.angle + 360) % 360]
         self.rect = self.image.get_rect()
         self.rect.centerx = self.x
@@ -220,6 +238,12 @@ class Tank(pygame.sprite.Sprite):
         x_for_bullet = self.x + self.rect.width / 2 * cos(self.angle * pi / 180)
         y_for_bullet = self.y + -self.rect.height / 2 * sin(self.angle * pi / 180)
         return self.angle, x_for_bullet, y_for_bullet
+
+    def already_reloaded(self):
+        return self.is_reloaded
+
+    def reloading(self):
+        self.is_reloaded = False
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -515,11 +539,15 @@ class GameLevel:
     def move_enemy(self):
         pass
 
-    def shoot(self, event, tank):
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:  # make bullet if you press left mouse button
-                angle, x, y = tank.get_position_and_angle_for_bullet()
-                Bullet(angle, x, y)
+    def shoot(self, tank):
+        # make bullet if tank is reloaded
+        if tank.already_reloaded():
+            angle, x, y = tank.get_position_and_angle_for_bullet()
+            Bullet(angle, x, y)
+            if tank == self.player:
+                shot_sound.stop()
+                shot_sound.play(loops=-1, fade_ms=100)
+            tank.reloading()
 
     def check_pressed(self):
         ds = 0
@@ -541,9 +569,11 @@ class GameLevel:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
-                self.shoot(event, self.player)
-                for i in self.enemies:
-                    self.shoot(event, i)
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:
+                        self.shoot(self.player)
+            for i in self.enemies:
+                self.shoot(i)
             screen.fill(BACKGROUND)
             self.check_pressed()
             enemies_group.draw(screen)
@@ -556,7 +586,6 @@ class GameLevel:
 
 
 start_screen()
-
 first_screen = MiddleScreen(screens[0]['title'],
                             screens[0]['text'],
                             screens[0]['background'])
