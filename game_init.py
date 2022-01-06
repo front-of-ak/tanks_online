@@ -6,6 +6,7 @@ import pygame_widgets
 from pygame_widgets.button import Button
 from math import sin, cos, pi
 from screen_attributes import screens
+from level_generator import generate
 
 pygame.init()
 
@@ -415,8 +416,8 @@ class House(Tile):
 
 
 def position_count(column, row):
-    pos_x = column * TILE_WIDTH - TILE_WIDTH // 2
-    pos_y = row * TILE_HEIGHT - TILE_HEIGHT // 2
+    pos_x = (column + 1) * TILE_WIDTH - TILE_WIDTH // 2
+    pos_y = (row + 1) * TILE_HEIGHT - TILE_HEIGHT // 2
     return pos_x, pos_y
 
 
@@ -439,6 +440,7 @@ class GameLevel:
         self.enemies = []
         self.houses = []
         self.player = None
+        self.player_is_alive = True
 
         pygame.mouse.set_visible(False)
 
@@ -490,6 +492,7 @@ class GameLevel:
         move_down = True
         move_left = True
         move_right = True
+        move_enemy = True
         for i in top_borders_group:
             if pygame.sprite.collide_mask(self.player, i):
                 move_down = False
@@ -502,9 +505,21 @@ class GameLevel:
         for i in left_borders_group:
             if pygame.sprite.collide_mask(self.player, i):
                 move_right = False
+        for i in self.enemies:
+            if pygame.sprite.collide_mask(self.player, i):
+                i.kill()
+
+                move_enemy = False
 
         if move_up and move_left and move_down and move_right:
-            self.player.move(ds, da, '00')
+            if move_enemy:
+                self.player.move(ds, da, '00')
+            else:
+                coordinates = self.player.rect.centerx, self.player.rect.centery
+                self.player.kill()
+                self.player_is_alive = False
+                Boom(*coordinates)
+
         elif move_up and move_left and move_down and not move_right:
             self.player.move(ds, da, '+0')
         elif move_up and move_left and not move_down and move_right:
@@ -536,8 +551,60 @@ class GameLevel:
         elif not move_up and not move_left and not move_down and not move_right:
             self.player.move(ds, da, 'nn')
 
-    def move_enemy(self):
-        pass
+    def move_enemies(self):
+        for i in self.enemies:
+            self.move_enemy(i)
+
+    def move_enemy(self, enemy, ds=1, da=0):
+        move_up = True
+        move_down = True
+        move_left = True
+        move_right = True
+        for i in top_borders_group:
+            if pygame.sprite.collide_mask(enemy, i):
+                move_down = False
+        for i in bottom_borders_group:
+            if pygame.sprite.collide_mask(enemy, i):
+                move_up = False
+        for i in right_borders_group:
+            if pygame.sprite.collide_mask(enemy, i):
+                move_left = False
+        for i in left_borders_group:
+            if pygame.sprite.collide_mask(enemy, i):
+                move_right = False
+
+        if move_up and move_left and move_down and move_right:
+            enemy.move(ds, da, '00')
+        elif move_up and move_left and move_down and not move_right:
+            enemy.move(ds, da, '+0')
+        elif move_up and move_left and not move_down and move_right:
+            enemy.move(ds, da, '0+')
+        elif move_up and move_left and not move_down and not move_right:
+            enemy.move(ds, da, '++')
+        elif move_up and not move_left and move_down and move_right:
+            enemy.move(ds, da, '-0')
+        elif move_up and not move_left and move_down and not move_right:
+            enemy.move(ds, da, 'n0')
+        elif move_up and not move_left and not move_down and move_right:
+            enemy.move(ds, da, '-+')
+        elif move_up and not move_left and not move_down and not move_right:
+            enemy.move(ds, da, 'n+')
+        elif not move_up and move_left and move_down and move_right:
+            enemy.move(ds, da, '0-')
+        elif not move_up and move_left and move_down and not move_right:
+            enemy.move(ds, da, '+-')
+        elif not move_up and move_left and not move_down and move_right:
+            enemy.move(ds, da, '0n')
+        elif not move_up and move_left and not move_down and not move_right:
+            enemy.move(ds, da, '+n')
+        elif not move_up and not move_left and move_down and move_right:
+            enemy.move(ds, da, '--')
+        elif not move_up and not move_left and move_down and not move_right:
+            enemy.move(ds, da, 'n-')
+        elif not move_up and not move_left and not move_down and move_right:
+            enemy.move(ds, da, '-n')
+        elif not move_up and not move_left and not move_down and not move_right:
+            enemy.move(ds, da, 'nn')
 
     def shoot(self, tank):
         # make bullet if tank is reloaded
@@ -562,12 +629,14 @@ class GameLevel:
             ds -= DELTA_DISTANCE_FOR_TANK
         if ds or da:
             self.move_player(ds, da)
-        self.move_enemy()
+        self.move_enemies()
 
     def loop(self):
         while self.running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
+                    self.running = False
+                if not self.player_is_alive:
                     self.running = False
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
@@ -576,11 +645,10 @@ class GameLevel:
                 self.shoot(i)
             screen.fill(BACKGROUND)
             self.check_pressed()
-            enemies_group.draw(screen)
             all_sprites.draw(screen)
-            all_sprites.update()
+            enemies_group.draw(screen)
             player_group.draw(screen)
-
+            all_sprites.update()
             pygame.display.flip()
             clock.tick(FPS)
 
@@ -589,6 +657,6 @@ start_screen()
 first_screen = MiddleScreen(screens[0]['title'],
                             screens[0]['text'],
                             screens[0]['background'])
-
+generate('first_level.txt')
 first_level = GameLevel('first_level.txt')
 terminate()
