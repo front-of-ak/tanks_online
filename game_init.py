@@ -1,3 +1,4 @@
+import math
 import os
 import random
 import sys
@@ -654,7 +655,22 @@ class GameLevel:
 
     def move_enemies(self):
         for i in enemies_group:
+            self.check_tank_pos(i)
             self.move_enemy(i)
+            self.able_to_shoot(i)
+
+    def check_tank_pos(self, i):
+        pass
+
+    def able_to_shoot(self, i):
+        player_distance = math.sqrt((self.player.rect.centerx - i.rect.centerx) ** 2 +
+                                    (self.player.rect.centery - i.rect.centery) ** 2)
+        enemy_x, enemy_y, enemy_angle = i.rect.centerx, i.rect.centery, i.angle
+        player_x_suppose, player_y_suppose = enemy_x + player_distance * math.cos(math.radians(enemy_angle)), \
+                                             enemy_y - player_distance * math.sin(math.radians(enemy_angle))
+        if player_x_suppose - 20 <= self.player.rect.centerx <= player_x_suppose + 20 and \
+                player_y_suppose - 20 <= self.player.rect.centery <= player_y_suppose + 20:
+            self.shoot(i)
 
     def move_enemy(self, enemy, ds=1, da=0):
         move_up = True
