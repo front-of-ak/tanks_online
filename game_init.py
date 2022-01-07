@@ -37,7 +37,7 @@ DELTA_ANGLE = 2
 DELTA_DISTANCE_FOR_TANK = 3
 DELTA_DISTANCE_FOR_BULLET = 12
 NUM_OF_FRAMES = 360 // DELTA_ANGLE
-BOOM_FPS = 48
+BOOM_FPS = 60
 RELOAD_TIME = 2
 
 OBJECTS = {'empty': '.', 'wall': '/', 'enemy': '-', 'player': '@'}
@@ -69,6 +69,7 @@ bottom_borders_group = pygame.sprite.Group()
 
 player_group = pygame.sprite.Group()
 enemies_group = pygame.sprite.Group()
+boom_group = pygame.sprite.Group()
 
 
 def terminate():
@@ -111,7 +112,8 @@ TANKS_IMAGES = {
     'player': load_image('tank_sheet.png', -1),
     'enemy': load_image('enemy_tank_sheet.png', -1)
 }
-SHEET = load_image('boom_sheet.png', color_key=-1)
+BOOM_SHEET = load_image('boom_sheet.png', color_key=-1)
+BULLET_SHEET = load_image('bullet_sheet.png', color_key=-1)
 
 
 # function for start screen
@@ -236,8 +238,8 @@ class Tank(pygame.sprite.Sprite):
                     sheet.subsurface(pygame.Rect(frame_location, self.rect.size))
 
     def get_position_and_angle_for_bullet(self):
-        x_for_bullet = self.x + self.rect.width / 2 * cos(self.angle * pi / 180)
-        y_for_bullet = self.y + -self.rect.height / 2 * sin(self.angle * pi / 180)
+        x_for_bullet = self.x + 1 * self.rect.width / 2 * cos(self.angle * pi / 180)
+        y_for_bullet = self.y + 1 * -self.rect.height / 2 * sin(self.angle * pi / 180)
         return self.angle, x_for_bullet, y_for_bullet
 
     def already_reloaded(self):
@@ -248,12 +250,11 @@ class Tank(pygame.sprite.Sprite):
 
 
 class Bullet(pygame.sprite.Sprite):
-    sheet = load_image('bullet_sheet.png', color_key=-1)
-
     def __init__(self, angle, pos_x, pos_y):
         super().__init__(all_sprites, bullets_group)
 
         self.angle = angle
+        self.mask = None
         self.set_image_using_angle(angle)
         self.rect = self.image.get_rect()
         self.rect.centerx = pos_x
@@ -267,22 +268,39 @@ class Bullet(pygame.sprite.Sprite):
         self.rect.centerx = self.x
         self.rect.centery = self.y
 
+        explode = False
         if not self.rect.colliderect(screen.get_rect()) or self.x > WIDTH or self.y > HEIGHT:
+            explode = True
+
+        for i in houses_group:
+            if pygame.sprite.collide_mask(self, i):
+                explode = True
+        for i in enemies_group:
+            if pygame.sprite.collide_mask(self, i):
+                explode = True
+                i.kill()
+        for i in player_group:
+            if pygame.sprite.collide_mask(self, i):
+                explode = True
+                i.kill()
+
+        if explode:
             Boom(self.x, self.y)
             self.kill()
 
     def set_image_using_angle(self, angle):  # getting bullet image from bullet_sheet
         num_of_sprite = (angle // DELTA_ANGLE) % NUM_OF_FRAMES
-        self.rect = pygame.Rect(0, 0, self.sheet.get_width() // NUM_OF_FRAMES, self.sheet.get_height() // 1)
+        self.rect = pygame.Rect(0, 0, BULLET_SHEET.get_width() // NUM_OF_FRAMES, BULLET_SHEET.get_height() // 1)
         frame_location = (self.rect.w * num_of_sprite, 0)
-        self.image = self.sheet.subsurface(pygame.Rect(frame_location, self.rect.size))
+        self.image = BULLET_SHEET.subsurface(pygame.Rect(frame_location, self.rect.size))
+        self.mask = pygame.mask.from_surface(self.image)
 
 
 class Boom(pygame.sprite.Sprite):
     rows, columns, = 6, 8
 
     def __init__(self, pos_x, pos_y):
-        super().__init__(all_sprites)
+        super().__init__(all_sprites, boom_group)
         self.frames = []
         self.cut_sheet()
 
@@ -305,12 +323,12 @@ class Boom(pygame.sprite.Sprite):
             self.image = self.frames[self.cur_frame]
 
     def cut_sheet(self):
-        self.rect = pygame.Rect(0, 0, SHEET.get_width() // self.columns,
-                                SHEET.get_height() // self.rows)
+        self.rect = pygame.Rect(0, 0, BOOM_SHEET.get_width() // self.columns,
+                                BOOM_SHEET.get_height() // self.rows)
         for i in range(self.rows):
             for j in range(self.columns):
                 frame_location = (self.rect.w * j, self.rect.h * i)
-                new_image = SHEET.subsurface(pygame.Rect(frame_location, self.rect.size))
+                new_image = BOOM_SHEET.subsurface(pygame.Rect(frame_location, self.rect.size))
                 self.frames.append(new_image)
 
 
@@ -399,6 +417,7 @@ class Border(pygame.sprite.Sprite):
 class House(Tile):
     def __init__(self, tile_type, pos_x, pos_y, borders):
         super().__init__(tile_type, pos_x, pos_y, houses_group)
+        self.mask = pygame.mask.from_surface(self.image)
         pos_x *= TILE_WIDTH
         pos_y *= TILE_HEIGHT
         if borders['top_border']:
@@ -437,7 +456,6 @@ class GameLevel:
     def __init__(self, level_file):
         self.running = True
         self.level_file = level_file
-        self.enemies = []
         self.houses = []
         self.player = None
         self.player_is_alive = True
@@ -482,7 +500,7 @@ class GameLevel:
                     self.houses.append(House('wall', column, row, borders))
                 elif self.map[row][column] == OBJECTS['enemy']:
                     Tile('empty', column, row)
-                    self.enemies.append(Enemy(column, row))
+                    Enemy(column, row)
                 elif self.map[row][column] == OBJECTS['player']:
                     Tile('empty', column, row)
                     self.player = Player(column, row)
@@ -492,7 +510,6 @@ class GameLevel:
         move_down = True
         move_left = True
         move_right = True
-        move_enemy = True
         for i in top_borders_group:
             if pygame.sprite.collide_mask(self.player, i):
                 move_down = False
@@ -505,20 +522,9 @@ class GameLevel:
         for i in left_borders_group:
             if pygame.sprite.collide_mask(self.player, i):
                 move_right = False
-        for i in self.enemies:
-            if pygame.sprite.collide_mask(self.player, i):
-                i.kill()
-
-                move_enemy = False
 
         if move_up and move_left and move_down and move_right:
-            if move_enemy:
-                self.player.move(ds, da, '00')
-            else:
-                coordinates = self.player.rect.centerx, self.player.rect.centery
-                self.player.kill()
-                self.player_is_alive = False
-                Boom(*coordinates)
+            self.player.move(ds, da, '00')
 
         elif move_up and move_left and move_down and not move_right:
             self.player.move(ds, da, '+0')
@@ -552,7 +558,7 @@ class GameLevel:
             self.player.move(ds, da, 'nn')
 
     def move_enemies(self):
-        for i in self.enemies:
+        for i in enemies_group:
             self.move_enemy(i)
 
     def move_enemy(self, enemy, ds=1, da=0):
@@ -572,6 +578,21 @@ class GameLevel:
         for i in left_borders_group:
             if pygame.sprite.collide_mask(enemy, i):
                 move_right = False
+
+        for i in enemies_group:
+            if i != enemy:
+                if pygame.sprite.collide_mask(enemy, i):
+                    coordinates = enemy.rect.centerx, enemy.rect.centery
+                    enemy.kill()
+                    i.kill()
+                    Boom(*coordinates)
+
+        if pygame.sprite.collide_mask(enemy, self.player):
+            coordinates = self.player.rect.centerx, self.player.rect.centery
+            enemy.kill()
+            self.player.kill()
+            Boom(*coordinates)
+            self.player_is_alive = False
 
         if move_up and move_left and move_down and move_right:
             enemy.move(ds, da, '00')
@@ -641,13 +662,15 @@ class GameLevel:
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
                         self.shoot(self.player)
-            for i in self.enemies:
-                self.shoot(i)
+            # for i in enemies_group:
+            #     self.shoot(i)
             screen.fill(BACKGROUND)
             self.check_pressed()
             all_sprites.draw(screen)
             enemies_group.draw(screen)
             player_group.draw(screen)
+            boom_group.draw(screen)
+
             all_sprites.update()
             pygame.display.flip()
             clock.tick(FPS)
