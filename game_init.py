@@ -545,6 +545,18 @@ class GameLevel:
 
         pygame.mouse.set_visible(False)
 
+        for i in range(LEVEL_HEIGHT):
+            pos_y = i * TILE_HEIGHT
+            Border(0, pos_y, 0, pos_y + TILE_HEIGHT, right_borders_group)
+            Border(LEVEL_WIDTH * TILE_WIDTH, pos_y,
+                   LEVEL_WIDTH * TILE_WIDTH, pos_y + TILE_HEIGHT,
+                   left_borders_group)
+        for i in range(LEVEL_WIDTH):
+            pos_x = i * TILE_WIDTH
+            Border(pos_x, 0, pos_x + TILE_WIDTH, 0, bottom_borders_group)
+            Border(pos_x, LEVEL_HEIGHT * TILE_HEIGHT,
+                   pos_x + TILE_WIDTH, LEVEL_HEIGHT * TILE_HEIGHT,
+                   top_borders_group)
         self.map = self.load_level_map()
         self.load_level()
         self.loop()
@@ -763,6 +775,6 @@ start_screen()
 first_screen = MiddleScreen(screens[0]['title'],
                             screens[0]['text'],
                             screens[0]['background'])
-generate('first_level.txt')
+# generate('first_level.txt')
 first_level = GameLevel('first_level.txt')
 terminate()
