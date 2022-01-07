@@ -446,6 +446,7 @@ class Enemy(Tank):
     def __init__(self, col, row):
         pos_x, pos_y = position_count(col, row)
         super().__init__(TANKS_IMAGES['enemy'], 1, NUM_OF_FRAMES, pos_x, pos_y, enemies_group)
+        self.angle = random.randrange(0, 360, 2)
 
     def move(self, s, a, move_enable_string='00'):
         self.angle += a
@@ -475,7 +476,7 @@ class Enemy(Tank):
             if self.x <= self.x + s * cos(self.angle * pi / 180):
                 self.x += s * cos(self.angle * pi / 180)
             else:
-                self.angle = random.randrange(270, 90, -2) + self.angle
+                self.angle = random.randrange(270, 450, 2) + self.angle
             self.y += -s * sin(self.angle * pi / 180)
         if move_enable_string == 'n0':
             self.y += -s * sin(self.angle * pi / 180)
@@ -527,7 +528,7 @@ class Enemy(Tank):
             if self.x <= self.x + s * cos(self.angle * pi / 180):
                 self.x += s * cos(self.angle * pi / 180)
             else:
-                self.angle = random.randrange(270, 90, -2) + self.angle
+                self.angle = random.randrange(270, 450, 2) + self.angle
 
 
 class Player(Tank):
@@ -655,22 +656,34 @@ class GameLevel:
 
     def move_enemies(self):
         for i in enemies_group:
-            self.check_tank_pos(i)
             self.move_enemy(i)
             self.able_to_shoot(i)
 
-    def check_tank_pos(self, i):
-        pass
+    def check_tank_pos(self, enemy):
+        pl_x, pl_y = self.player.rect.centerx, self.player.rect.centery
+        en_x, en_y = enemy.rect.centerx, enemy.rect.centery
+        if 145 > en_x - pl_x > 45 and 100 > en_y - pl_y > 0:
+            return 226
+        elif -145 < en_x - pl_x < 45 and -100 < en_y - pl_y < 0:
+            return 406
+        elif 145 > en_x - pl_x > 45 and -100 < en_y - pl_y < 0:
+            return 136
+        elif -145 < en_x - pl_x < 45 and 100 > en_y - pl_y > 0:
+            return 316
+        elif (-145 > en_x - pl_x or en_x - pl_x > 145) and (-105 > en_y - pl_y or en_y - pl_y > 105):
+            return 180 - self.player.angle % 180
+        else:
+            return enemy.angle
 
-    def able_to_shoot(self, i):
-        player_distance = math.sqrt((self.player.rect.centerx - i.rect.centerx) ** 2 +
-                                    (self.player.rect.centery - i.rect.centery) ** 2)
-        enemy_x, enemy_y, enemy_angle = i.rect.centerx, i.rect.centery, i.angle
+    def able_to_shoot(self, enemy):
+        player_distance = math.sqrt((self.player.rect.centerx - enemy.rect.centerx) ** 2 +
+                                    (self.player.rect.centery - enemy.rect.centery) ** 2)
+        enemy_x, enemy_y, enemy_angle = enemy.rect.centerx, enemy.rect.centery, enemy.angle
         player_x_suppose, player_y_suppose = enemy_x + player_distance * math.cos(math.radians(enemy_angle)), \
                                              enemy_y - player_distance * math.sin(math.radians(enemy_angle))
         if player_x_suppose - 20 <= self.player.rect.centerx <= player_x_suppose + 20 and \
                 player_y_suppose - 20 <= self.player.rect.centery <= player_y_suppose + 20:
-            self.shoot(i)
+            self.shoot(enemy)
 
     def move_enemy(self, enemy, ds=1, da=0):
         move_up = True
@@ -707,6 +720,7 @@ class GameLevel:
 
         if move_up and move_left and move_down and move_right:
             enemy.move(ds, da, '00')
+            enemy.angle = self.check_tank_pos(enemy)
         elif move_up and move_left and move_down and not move_right:
             enemy.move(ds, da, '+0')
         elif move_up and move_left and not move_down and move_right:
@@ -791,6 +805,6 @@ start_screen()
 first_screen = MiddleScreen(screens[0]['title'],
                             screens[0]['text'],
                             screens[0]['background'])
-# generate('first_level.txt')
+generate('first_level.txt')
 first_level = GameLevel('first_level.txt')
 terminate()

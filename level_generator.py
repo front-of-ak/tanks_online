@@ -20,7 +20,7 @@ def generate(level_name):
                 while temp_pos in houses_positions:
                     temp_pos = random.randint(0, 27)
                 houses_positions.append(temp_pos)
-        if areEnemies and enemies <= 4:
+        if areEnemies and enemies <= 5:
             enemies_amount = random.randint(1, 2)
             enemies += 1
             for _ in range(enemies_amount):
