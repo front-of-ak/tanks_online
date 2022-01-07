@@ -1,4 +1,5 @@
 import os
+import random
 import sys
 import pygame
 import pygame_widgets
@@ -445,6 +446,88 @@ class Enemy(Tank):
         pos_x, pos_y = position_count(col, row)
         super().__init__(TANKS_IMAGES['enemy'], 1, NUM_OF_FRAMES, pos_x, pos_y, enemies_group)
 
+    def move(self, s, a, move_enable_string='00'):
+        self.angle += a
+        if move_enable_string in '00':
+            self.x += s * cos(self.angle * pi / 180)
+            self.y += -s * sin(self.angle * pi / 180)
+        if move_enable_string == '+0':
+            if self.x >= self.x + s * cos(self.angle * pi / 180):
+                self.x += s * cos(self.angle * pi / 180)
+            else:
+                self.angle = random.randrange(90, 270, 2) + self.angle
+            self.y += -s * sin(self.angle * pi / 180)
+        if move_enable_string == '0+':
+            if self.y >= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
+            else:
+                self.angle = random.randrange(0, 180, 2) + self.angle
+            self.x += s * cos(self.angle * pi / 180)
+        if move_enable_string == '++':
+            if self.x >= self.x + s * cos(self.angle * pi / 180):
+                self.x += s * cos(self.angle * pi / 180)
+            if self.y >= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
+            else:
+                self.angle = random.randrange(90, 180, 2) + self.angle
+        if move_enable_string == '-0':
+            if self.x <= self.x + s * cos(self.angle * pi / 180):
+                self.x += s * cos(self.angle * pi / 180)
+            else:
+                self.angle = random.randrange(270, 90, -2) + self.angle
+            self.y += -s * sin(self.angle * pi / 180)
+        if move_enable_string == 'n0':
+            self.y += -s * sin(self.angle * pi / 180)
+        if move_enable_string == '-+':
+            if self.x <= self.x + s * cos(self.angle * pi / 180):
+                self.x += s * cos(self.angle * pi / 180)
+            if self.y >= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
+            else:
+                self.angle = random.randrange(0, 90, 2) + self.angle
+        if move_enable_string == 'n+':
+            if self.y >= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
+            else:
+                self.angle = random.randrange(0, 180, 2) + self.angle
+        if move_enable_string == '0-':
+            if self.y <= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
+            else:
+                self.angle = random.randrange(180, 360, 2) + self.angle
+            self.x += s * cos(self.angle * pi / 180)
+        if move_enable_string == '+-':
+            if self.x >= self.x + s * cos(self.angle * pi / 180):
+                self.x += s * cos(self.angle * pi / 180)
+            if self.y <= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
+            else:
+                self.angle = random.randrange(180, 270, 2) + self.angle
+        if move_enable_string == '0n':
+            self.x += s * cos(self.angle * pi / 180)
+        if move_enable_string == '+n':
+            if self.x >= self.x + s * cos(self.angle * pi / 180):
+                self.x += s * cos(self.angle * pi / 180)
+            else:
+                self.angle = random.randrange(90, 270, 2) + self.angle
+        if move_enable_string == '--':
+            if self.x <= self.x + s * cos(self.angle * pi / 180):
+                self.x += s * cos(self.angle * pi / 180)
+            if self.y <= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
+            else:
+                self.angle = random.randrange(270, 360, 2) + self.angle
+        if move_enable_string == 'n-':
+            if self.y <= self.y + -s * sin(self.angle * pi / 180):
+                self.y += -s * sin(self.angle * pi / 180)
+            else:
+                self.angle = random.randrange(180, 360, 2) + self.angle
+        if move_enable_string == '-n':
+            if self.x <= self.x + s * cos(self.angle * pi / 180):
+                self.x += s * cos(self.angle * pi / 180)
+            else:
+                self.angle = random.randrange(270, 90, -2) + self.angle
+
 
 class Player(Tank):
     def __init__(self, col, row):
@@ -650,14 +733,13 @@ class GameLevel:
             ds -= DELTA_DISTANCE_FOR_TANK
         if ds or da:
             self.move_player(ds, da)
-        self.move_enemies()
 
     def loop(self):
         while self.running:
+            if not self.player_is_alive:
+                self.running = False
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.running = False
-                if not self.player_is_alive:
                     self.running = False
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
@@ -666,6 +748,7 @@ class GameLevel:
             #     self.shoot(i)
             screen.fill(BACKGROUND)
             self.check_pressed()
+            self.move_enemies()
             all_sprites.draw(screen)
             enemies_group.draw(screen)
             player_group.draw(screen)
