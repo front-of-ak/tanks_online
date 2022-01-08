@@ -2,6 +2,7 @@ import math
 import os
 import random
 import sys
+
 import pygame
 import pygame_widgets
 
@@ -447,88 +448,132 @@ class Enemy(Tank):
         pos_x, pos_y = position_count(col, row)
         super().__init__(TANKS_IMAGES['enemy'], 1, NUM_OF_FRAMES, pos_x, pos_y, enemies_group)
         self.angle = random.randrange(0, 360, 2)
+        self.angle_to_have = self.angle
+        self.have_to_move_off_the_wall_a_bit = 0
+        self.doing_plus_angle = True
 
     def move(self, s, a, move_enable_string='00'):
-        self.angle += a
-        if move_enable_string in '00':
-            self.x += s * cos(self.angle * pi / 180)
-            self.y += -s * sin(self.angle * pi / 180)
-        if move_enable_string == '+0':
-            if self.x >= self.x + s * cos(self.angle * pi / 180):
+        move_off_const = 2
+
+        if self.angle < 0:
+            self.angle += 360
+        if self.angle > 360:
+            self.angle -= 360
+        if self.angle_to_have < 0:
+            self.angle_to_have += 360
+        if self.angle_to_have > 360:
+            self.angle_to_have -= 360
+
+        # print(self.have_to_move_off_the_wall_a_bit, move_enable_string, self.angle, self.angle_to_have)
+
+        if self.angle != self.angle_to_have:
+            self.angle += DELTA_ANGLE
+            # if abs(self.angle - self.angle_to_have) <= 360 - abs(self.angle - self.angle_to_have):
+            #     self.angle -= DELTA_ANGLE
+            # else:
+            #     self.angle += DELTA_ANGLE
+
+        else:
+            if self.have_to_move_off_the_wall_a_bit > 0:
+                s = 1
                 self.x += s * cos(self.angle * pi / 180)
-            else:
-                self.angle = random.randrange(90, 270, 2) + self.angle
-            self.y += -s * sin(self.angle * pi / 180)
-        if move_enable_string == '0+':
-            if self.y >= self.y + -s * sin(self.angle * pi / 180):
                 self.y += -s * sin(self.angle * pi / 180)
+                self.have_to_move_off_the_wall_a_bit -= 1
+
             else:
-                self.angle = random.randrange(0, 180, 2) + self.angle
-            self.x += s * cos(self.angle * pi / 180)
-        if move_enable_string == '++':
-            if self.x >= self.x + s * cos(self.angle * pi / 180):
-                self.x += s * cos(self.angle * pi / 180)
-            if self.y >= self.y + -s * sin(self.angle * pi / 180):
-                self.y += -s * sin(self.angle * pi / 180)
-            else:
-                self.angle = random.randrange(90, 180, 2) + self.angle
-        if move_enable_string == '-0':
-            if self.x <= self.x + s * cos(self.angle * pi / 180):
-                self.x += s * cos(self.angle * pi / 180)
-            else:
-                self.angle = random.randrange(270, 450, 2) + self.angle
-            self.y += -s * sin(self.angle * pi / 180)
-        if move_enable_string == 'n0':
-            self.y += -s * sin(self.angle * pi / 180)
-        if move_enable_string == '-+':
-            if self.x <= self.x + s * cos(self.angle * pi / 180):
-                self.x += s * cos(self.angle * pi / 180)
-            if self.y >= self.y + -s * sin(self.angle * pi / 180):
-                self.y += -s * sin(self.angle * pi / 180)
-            else:
-                self.angle = random.randrange(0, 90, 2) + self.angle
-        if move_enable_string == 'n+':
-            if self.y >= self.y + -s * sin(self.angle * pi / 180):
-                self.y += -s * sin(self.angle * pi / 180)
-            else:
-                self.angle = random.randrange(0, 180, 2) + self.angle
-        if move_enable_string == '0-':
-            if self.y <= self.y + -s * sin(self.angle * pi / 180):
-                self.y += -s * sin(self.angle * pi / 180)
-            else:
-                self.angle = random.randrange(180, 360, 2) + self.angle
-            self.x += s * cos(self.angle * pi / 180)
-        if move_enable_string == '+-':
-            if self.x >= self.x + s * cos(self.angle * pi / 180):
-                self.x += s * cos(self.angle * pi / 180)
-            if self.y <= self.y + -s * sin(self.angle * pi / 180):
-                self.y += -s * sin(self.angle * pi / 180)
-            else:
-                self.angle = random.randrange(180, 270, 2) + self.angle
-        if move_enable_string == '0n':
-            self.x += s * cos(self.angle * pi / 180)
-        if move_enable_string == '+n':
-            if self.x >= self.x + s * cos(self.angle * pi / 180):
-                self.x += s * cos(self.angle * pi / 180)
-            else:
-                self.angle = random.randrange(90, 270, 2) + self.angle
-        if move_enable_string == '--':
-            if self.x <= self.x + s * cos(self.angle * pi / 180):
-                self.x += s * cos(self.angle * pi / 180)
-            if self.y <= self.y + -s * sin(self.angle * pi / 180):
-                self.y += -s * sin(self.angle * pi / 180)
-            else:
-                self.angle = random.randrange(270, 360, 2) + self.angle
-        if move_enable_string == 'n-':
-            if self.y <= self.y + -s * sin(self.angle * pi / 180):
-                self.y += -s * sin(self.angle * pi / 180)
-            else:
-                self.angle = random.randrange(180, 360, 2) + self.angle
-        if move_enable_string == '-n':
-            if self.x <= self.x + s * cos(self.angle * pi / 180):
-                self.x += s * cos(self.angle * pi / 180)
-            else:
-                self.angle = random.randrange(270, 450, 2) + self.angle
+                if move_enable_string == '00':
+                    self.x += s * cos(self.angle * pi / 180)
+                    self.y += -s * sin(self.angle * pi / 180)
+                if move_enable_string == '+0':
+                    if self.x >= self.x + s * cos(self.angle * pi / 180):
+                        self.x += s * cos(self.angle * pi / 180)
+                        self.y += -s * sin(self.angle * pi / 180)
+                    else:
+                        self.angle_to_have = random.randrange(90, 270, 2) + self.angle
+                        self.have_to_move_off_the_wall_a_bit = move_off_const
+                if move_enable_string == '0+':
+                    if self.y >= self.y + -s * sin(self.angle * pi / 180):
+                        self.y += -s * sin(self.angle * pi / 180)
+                        self.x += s * cos(self.angle * pi / 180)
+                    else:
+                        self.angle_to_have = random.randrange(0, 180, 2) + self.angle
+                        self.have_to_move_off_the_wall_a_bit = move_off_const
+                if move_enable_string == '++':
+                    if self.x >= self.x + s * cos(self.angle * pi / 180) and \
+                            self.y >= self.y + -s * sin(self.angle * pi / 180):
+                        self.x += s * cos(self.angle * pi / 180)
+                        self.y += -s * sin(self.angle * pi / 180)
+                    else:
+                        self.angle_to_have = random.randrange(90, 180, 2) + self.angle
+                        self.have_to_move_off_the_wall_a_bit = move_off_const
+                if move_enable_string == '-0':
+                    if self.x <= self.x + s * cos(self.angle * pi / 180):
+                        self.x += s * cos(self.angle * pi / 180)
+                        self.y += -s * sin(self.angle * pi / 180)
+                    else:
+                        self.angle_to_have = random.randrange(270, 450, 2) + self.angle
+                        self.have_to_move_off_the_wall_a_bit = move_off_const
+                if move_enable_string == 'n0':
+                    self.y += -s * sin(self.angle * pi / 180)
+                if move_enable_string == '-+':
+                    if self.x <= self.x + s * cos(self.angle * pi / 180) and \
+                            self.y >= self.y + -s * sin(self.angle * pi / 180):
+                        self.x += s * cos(self.angle * pi / 180)
+                        self.y += -s * sin(self.angle * pi / 180)
+                    else:
+                        self.angle_to_have = random.randrange(0, 90, 2) + self.angle
+                        self.have_to_move_off_the_wall_a_bit = move_off_const
+                if move_enable_string == 'n+':
+                    if self.y >= self.y + -s * sin(self.angle * pi / 180):
+                        self.y += -s * sin(self.angle * pi / 180)
+                    else:
+                        self.angle_to_have = random.randrange(0, 180, 2) + self.angle
+                        self.have_to_move_off_the_wall_a_bit = move_off_const
+                if move_enable_string == '0-':
+                    if self.y <= self.y + -s * sin(self.angle * pi / 180):
+                        self.y += -s * sin(self.angle * pi / 180)
+                        self.x += s * cos(self.angle * pi / 180)
+                    else:
+                        self.angle_to_have = random.randrange(180, 360, 2) + self.angle
+                        self.have_to_move_off_the_wall_a_bit = move_off_const
+                if move_enable_string == '+-':
+                    if self.x >= self.x + s * cos(self.angle * pi / 180) and \
+                            self.y <= self.y + -s * sin(self.angle * pi / 180):
+                        self.x += s * cos(self.angle * pi / 180)
+                        self.y += -s * sin(self.angle * pi / 180)
+                    if self.y <= self.y + -s * sin(self.angle * pi / 180):
+                        self.y += -s * sin(self.angle * pi / 180)
+                    else:
+                        self.angle_to_have = random.randrange(180, 270, 2) + self.angle
+                        self.have_to_move_off_the_wall_a_bit = move_off_const
+                if move_enable_string == '0n':
+                    self.x += s * cos(self.angle * pi / 180)
+                if move_enable_string == '+n':
+                    if self.x >= self.x + s * cos(self.angle * pi / 180):
+                        self.x += s * cos(self.angle * pi / 180)
+                    else:
+                        self.angle_to_have = random.randrange(90, 270, 2) + self.angle
+                        self.have_to_move_off_the_wall_a_bit = move_off_const
+                if move_enable_string == '--':
+                    if self.x <= self.x + s * cos(self.angle * pi / 180) and \
+                            self.y <= self.y + -s * sin(self.angle * pi / 180):
+                        self.x += s * cos(self.angle * pi / 180)
+                        self.y += -s * sin(self.angle * pi / 180)
+                    else:
+                        self.angle_to_have = random.randrange(270, 360, 2) + self.angle
+                        self.have_to_move_off_the_wall_a_bit = move_off_const
+                if move_enable_string == 'n-':
+                    if self.y <= self.y + -s * sin(self.angle * pi / 180):
+                        self.y += -s * sin(self.angle * pi / 180)
+                    else:
+                        self.angle_to_have = random.randrange(180, 360, 2) + self.angle
+                        self.have_to_move_off_the_wall_a_bit = move_off_const
+                if move_enable_string == '-n':
+                    if self.x <= self.x + s * cos(self.angle * pi / 180):
+                        self.x += s * cos(self.angle * pi / 180)
+                    else:
+                        self.angle_to_have = random.randrange(270, 450, 2) + self.angle
+                        self.have_to_move_off_the_wall_a_bit = move_off_const
 
 
 class Player(Tank):
@@ -619,7 +664,6 @@ class GameLevel:
         for i in left_borders_group:
             if pygame.sprite.collide_mask(self.player, i):
                 move_right = False
-
         if move_up and move_left and move_down and move_right:
             self.player.move(ds, da, '00')
 
@@ -659,6 +703,32 @@ class GameLevel:
             self.move_enemy(i)
             self.able_to_shoot(i)
 
+    def do_aiming(self, enemy):
+        delta_x = self.player.x - enemy.x
+        delta_y = self.player.y - enemy.y
+        a = delta_y
+        b = -delta_x
+        c = -enemy.x * delta_y + enemy.y * delta_x
+        can_collide_with_house = False
+        pygame.draw.line(screen, (0, 0, 0),
+                         (self.player.x, self.player.y), (enemy.x, enemy.y))
+        for house in self.houses:
+            x, y = house.rect.x, house.rect.y
+            if ((a * x + b * y + c) > 0 and (a * (x + TILE_WIDTH) + b * (y + TILE_HEIGHT) + c) < 0 or
+                (a * x + b * y + c) < 0 and (a * (x + TILE_WIDTH) + b * (y + TILE_HEIGHT) + c) > 0 or
+                (a * (x + TILE_WIDTH) + b * y + c) > 0 and (a * x + b * (y + TILE_HEIGHT) + c) < 0 or
+                (a * (x + TILE_WIDTH) + b * y + c) < 0 and (a * x + b * (y + TILE_HEIGHT) + c) > 0) and \
+                    (self.player.x <= x <= enemy.x or enemy.x <= x <= self.player.x) and \
+                    (self.player.y <= y <= enemy.y or enemy.y <= y <= self.player.y):
+                can_collide_with_house = True
+                break
+        angle = int(math.atan(a / b) * 180 / pi + 0.5)
+        if angle % 2 == 1:
+            angle -= 1
+
+        return not can_collide_with_house, angle  # возвращает можно ли целится и угол прямой
+        # по которой нужно стрелять
+
     def check_tank_pos(self, enemy):
         pl_x, pl_y = self.player.rect.centerx, self.player.rect.centery
         en_x, en_y = enemy.rect.centerx, enemy.rect.centery
@@ -670,10 +740,14 @@ class GameLevel:
             return 136
         elif -145 < en_x - pl_x < 45 and 100 > en_y - pl_y > 0:
             return 316
-        elif (-145 > en_x - pl_x or en_x - pl_x > 145) and (-105 > en_y - pl_y or en_y - pl_y > 105):
-            return 180 - self.player.angle % 180
         else:
-            return enemy.angle
+            can_aim, angle = self.do_aiming(enemy)
+            if can_aim:
+                return angle
+            if (-145 > en_x - pl_x or en_x - pl_x > 145) and (-105 > en_y - pl_y or en_y - pl_y > 105):
+                return 180 - self.player.angle % 180
+            else:
+                return enemy.angle
 
     def able_to_shoot(self, enemy):
         player_distance = math.sqrt((self.player.rect.centerx - enemy.rect.centerx) ** 2 +
@@ -719,8 +793,8 @@ class GameLevel:
             self.player_is_alive = False
 
         if move_up and move_left and move_down and move_right:
+            enemy.angle_to_have = self.check_tank_pos(enemy)
             enemy.move(ds, da, '00')
-            enemy.angle = self.check_tank_pos(enemy)
         elif move_up and move_left and move_down and not move_right:
             enemy.move(ds, da, '+0')
         elif move_up and move_left and not move_down and move_right:
@@ -759,7 +833,7 @@ class GameLevel:
             Bullet(angle, x, y)
             if tank == self.player:
                 shot_sound.stop()
-                shot_sound.play(loops=-1, fade_ms=100)
+                shot_sound.play(loops=1)
             tank.reloading()
 
     def check_pressed(self):
@@ -805,6 +879,6 @@ start_screen()
 first_screen = MiddleScreen(screens[0]['title'],
                             screens[0]['text'],
                             screens[0]['background'])
-generate('first_level.txt')
+# generate('first_level.txt')
 first_level = GameLevel('first_level.txt')
 terminate()
