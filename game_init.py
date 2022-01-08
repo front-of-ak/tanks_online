@@ -51,7 +51,7 @@ clock = pygame.time.Clock()
 pygame.display.set_caption(GAME_TITLE)
 
 # music init
-back_sound = pygame.mixer.Sound(file='data/sounds/malinovka.wav')
+back_sound = pygame.mixer.Sound(file=os.path.join("data", 'sounds', 'hoi4mainthemeallies.wav'))
 shot_sound = pygame.mixer.Sound(file='data/sounds/shot.wav')
 player_tank_dead_sound = pygame.mixer.Sound(file='data/sounds/player_tank_dead.wav')
 penetration_sound = pygame.mixer.Sound(file='data/sounds/penetration.wav')
@@ -147,10 +147,11 @@ def start_screen():
 
 
 class Tank(pygame.sprite.Sprite):
-    def __init__(self, sheet, row, col, pos_x, pos_y, *groups):
+    def __init__(self, sheet, row, col, pos_x, pos_y, game_level, *groups):
         super().__init__(all_sprites, *groups)
         self.frames = {}
         self.cut_sheet(sheet, col, row)
+        self.game_level = game_level
 
         self.angle = 0
         self.image = self.frames[self.angle]
@@ -286,6 +287,7 @@ class Bullet(pygame.sprite.Sprite):
             if pygame.sprite.collide_mask(self, i):
                 explode = True
                 i.kill()
+                i.game_level.player_is_alive = False
 
         if explode:
             Boom(self.x, self.y)
@@ -444,10 +446,10 @@ def position_count(column, row):
 
 
 class Enemy(Tank):
-    def __init__(self, col, row):
+    def __init__(self, col, row, game_level):
         pos_x, pos_y = position_count(col, row)
-        super().__init__(TANKS_IMAGES['enemy'], 1, NUM_OF_FRAMES, pos_x, pos_y, enemies_group)
-        self.angle = random.randrange(0, 360, 2)
+        super().__init__(TANKS_IMAGES['enemy'], 1, NUM_OF_FRAMES, pos_x, pos_y, game_level, enemies_group)
+        self.angle = random.randrange(2, 360, 2)
         self.angle_to_have = self.angle
         self.have_to_move_off_the_wall_a_bit = 0
         self.doing_plus_angle = True
@@ -475,7 +477,7 @@ class Enemy(Tank):
 
         else:
             if self.have_to_move_off_the_wall_a_bit > 0:
-                s = 1
+                s = DELTA_DISTANCE_FOR_TANK
                 self.x += s * cos(self.angle * pi / 180)
                 self.y += -s * sin(self.angle * pi / 180)
                 self.have_to_move_off_the_wall_a_bit -= 1
@@ -489,7 +491,7 @@ class Enemy(Tank):
                         self.x += s * cos(self.angle * pi / 180)
                         self.y += -s * sin(self.angle * pi / 180)
                     else:
-                        self.angle_to_have = random.randrange(90, 270, 2) + self.angle
+                        self.angle_to_have = random.randrange(135, 225, 2) + self.angle
                         self.have_to_move_off_the_wall_a_bit = move_off_const
                 if move_enable_string == '0+':
                     if self.y >= self.y + -s * sin(self.angle * pi / 180):
@@ -577,9 +579,9 @@ class Enemy(Tank):
 
 
 class Player(Tank):
-    def __init__(self, col, row):
+    def __init__(self, col, row, game_level):
         pos_x, pos_y = position_count(col, row)
-        super().__init__(TANKS_IMAGES['player'], 1, NUM_OF_FRAMES, pos_x, pos_y, player_group)
+        super().__init__(TANKS_IMAGES['player'], 1, NUM_OF_FRAMES, pos_x, pos_y, game_level, player_group)
 
 
 class GameLevel:
@@ -642,10 +644,10 @@ class GameLevel:
                     self.houses.append(House('wall', column, row, borders))
                 elif self.map[row][column] == OBJECTS['enemy']:
                     Tile('empty', column, row)
-                    Enemy(column, row)
+                    Enemy(column, row, self)
                 elif self.map[row][column] == OBJECTS['player']:
                     Tile('empty', column, row)
-                    self.player = Player(column, row)
+                    self.player = Player(column, row, self)
 
     def move_player(self, ds, da):
         move_up = True
@@ -700,8 +702,8 @@ class GameLevel:
 
     def move_enemies(self):
         for i in enemies_group:
-            self.move_enemy(i)
             self.able_to_shoot(i)
+            self.move_enemy(i)
 
     def do_aiming(self, enemy):
         delta_x = self.player.x - enemy.x
@@ -744,8 +746,6 @@ class GameLevel:
             can_aim, angle = self.do_aiming(enemy)
             if can_aim:
                 return angle
-            if (-145 > en_x - pl_x or en_x - pl_x > 145) and (-105 > en_y - pl_y or en_y - pl_y > 105):
-                return 180 - self.player.angle % 180
             else:
                 return enemy.angle
 
@@ -759,7 +759,7 @@ class GameLevel:
                 player_y_suppose - 20 <= self.player.rect.centery <= player_y_suppose + 20:
             self.shoot(enemy)
 
-    def move_enemy(self, enemy, ds=1, da=0):
+    def move_enemy(self, enemy, ds=DELTA_DISTANCE_FOR_TANK, da=0):
         move_up = True
         move_down = True
         move_left = True
