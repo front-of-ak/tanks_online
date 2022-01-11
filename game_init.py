@@ -9,11 +9,13 @@ import pygame_widgets
 from pygame_widgets.button import Button
 from math import sin, cos, pi
 from screen_attributes import screens
-from level_generator import generate
+
+# from level_generator import generate
 
 pygame.init()
 
 # constants
+CURRENT_LEVEL = 1
 FPS = 60
 WIDTH = 1080
 HEIGHT = 800
@@ -39,6 +41,7 @@ BUTTON_RADIUS = 10
 DELTA_ANGLE = 2
 DELTA_DISTANCE_FOR_TANK = 3
 DELTA_DISTANCE_FOR_BULLET = 12
+D_X_FOR_SHOOTING = 15
 NUM_OF_FRAMES = 360 // DELTA_ANGLE
 BOOM_FPS = 60
 RELOAD_TIME = 2
@@ -101,12 +104,6 @@ def load_image(name, color_key=None):
     return image
 
 
-def break_start_screen():
-    global start_screen_run
-    start_screen_run = False
-
-
-start_screen_run = True
 TILE_IMAGES = {
     'wall': load_image('house.png'),
     'empty': load_image('grass.png')
@@ -117,6 +114,34 @@ TANKS_IMAGES = {
 }
 BOOM_SHEET = load_image('boom_sheet.png', color_key=-1)
 BULLET_SHEET = load_image('bullet_sheet.png', color_key=-1)
+
+
+def game_process():
+    first_screen = MiddleScreen(screens[0]['title'],
+                                screens[0]['text'],
+                                screens[0]['background'])
+    # generate('first_level.txt')
+    first_level = GameLevel('first_level.txt')
+
+
+def break_start_screen():
+    global start_screen_run
+    start_screen_run = False
+
+
+def break_lost_screen():
+    global lost_screen_run
+    lost_screen_run = False
+
+
+def break_won_screen():
+    global won_screen_run
+    won_screen_run = False
+
+
+start_screen_run = True
+lost_screen_run = True
+won_screen_run = True
 
 
 # function for start screen
@@ -142,8 +167,81 @@ def start_screen():
         pygame_widgets.update(events)
         pygame.display.flip()
         clock.tick(FPS)
-
+    start_screen_run = True
     btn.hide()
+    game_process()
+
+
+def player_won_screen():
+    global won_screen_run
+    background = pygame.transform.scale(load_image('won_screen.jpg'), (WIDTH, HEIGHT))
+    screen.blit(background, (0, 0))
+
+    btn = Button(screen,
+                 WIDTH // 2 - BUTTON_SIZE[0] // 2, 3 * HEIGHT // 4, *BUTTON_SIZE,
+                 radius=BUTTON_RADIUS,
+                 image=load_image('go_forward.jpg'),
+                 onClick=break_won_screen
+                 )
+
+    while won_screen_run:
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                terminate()
+        events = pygame.event.get()
+        pygame_widgets.update(events)
+        pygame.display.flip()
+        clock.tick(FPS)
+    won_screen_run = True
+    btn.hide()
+
+
+def player_lost_screen():
+    global lost_screen_run
+    background = pygame.transform.scale(load_image('lost_screen.jpg'), (WIDTH, HEIGHT))
+    screen.blit(background, (0, 0))
+
+    btn = Button(screen,
+                 WIDTH // 2 - BUTTON_SIZE[0] // 2, 3 * HEIGHT // 4, *BUTTON_SIZE,
+                 radius=BUTTON_RADIUS,
+                 image=load_image('back_to_main_menu.jpg'),
+                 onClick=break_lost_screen
+                 )
+
+    # title rendering
+    font_title = pygame.font.Font(None, TITLE_TEXT_FONT_SIZE)
+    title_rendered = font_title.render('Вы проиграли!', True, TEXT_COLOR)
+    intro_rect = title_rendered.get_rect()
+    intro_rect.centerx = TITLE_TEXT_X
+    intro_rect.top = TITLE_TEXT_TOP
+    screen.fill(TEXT_BG, intro_rect)
+    screen.blit(title_rendered, intro_rect)
+
+    # main text rendering
+    font_text = pygame.font.Font(None, MAIN_TEXT_FONT_SIZE)
+    text_coord = MAIN_TEXT_TOP
+    text = ['Ваша страна понесла невосполнимые потери.', 'Теперь командованию придется репрессировать Вас...']
+    for line in text:
+        string_rendered = font_text.render(line, True, TEXT_COLOR)
+        intro_rect = string_rendered.get_rect()
+        intro_rect.centerx = MAIN_TEXT_X
+        text_coord += 10
+        intro_rect.top = text_coord
+        text_coord += intro_rect.height
+        screen.fill(TEXT_BG, intro_rect)
+        screen.blit(string_rendered, intro_rect)
+
+    while lost_screen_run:
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                terminate()
+        events = pygame.event.get()
+        pygame_widgets.update(events)
+        pygame.display.flip()
+        clock.tick(FPS)
+    lost_screen_run = True
+    btn.hide()
+    start_screen()
 
 
 class Tank(pygame.sprite.Sprite):
@@ -590,6 +688,7 @@ class Player(Tank):
 
 class GameLevel:
     def __init__(self, level_file):
+        self.player_won = False
         self.running = True
         self.level_file = level_file
         self.houses = []
@@ -705,8 +804,11 @@ class GameLevel:
             self.player.move(ds, da, 'nn')
 
     def move_enemies(self):
-        for i in enemies_group:
-            self.move_enemy(i)
+        if len(enemies_group):
+            for i in enemies_group:
+                self.move_enemy(i)
+        else:
+            self.player_won = True
 
     def do_aiming(self, enemy):
         delta_x = self.player.x - enemy.x
@@ -739,13 +841,13 @@ class GameLevel:
         en_x, en_y = enemy.rect.centerx, enemy.rect.centery
         can_aim, angle = self.do_aiming(enemy)
 
-        if 145 > en_x - pl_x > 45 and 100 > en_y - pl_y > 0:
+        if 100 > en_x - pl_x > 0 and 100 > en_y - pl_y > 0:
             angle = 226
-        elif -145 < en_x - pl_x < 45 and -100 < en_y - pl_y < 0:
+        elif -100 < en_x - pl_x < 0 and -100 < en_y - pl_y < 0:
             angle = 406
-        elif 145 > en_x - pl_x > 45 and -100 < en_y - pl_y < 0:
+        elif 100 > en_x - pl_x > 0 and -100 < en_y - pl_y < 0:
             angle = 136
-        elif -145 < en_x - pl_x < 45 and 100 > en_y - pl_y > 0:
+        elif -100 < en_x - pl_x < 0 and 100 > en_y - pl_y > 0:
             angle = 316
         else:
             angle = enemy.angle
@@ -758,8 +860,8 @@ class GameLevel:
         enemy_x, enemy_y, enemy_angle = enemy.rect.centerx, enemy.rect.centery, enemy.angle
         player_x_suppose, player_y_suppose = enemy_x + player_distance * math.cos(math.radians(enemy_angle)), \
                                              enemy_y - player_distance * math.sin(math.radians(enemy_angle))
-        if player_x_suppose - 20 <= self.player.rect.centerx <= player_x_suppose + 20 and \
-                player_y_suppose - 20 <= self.player.rect.centery <= player_y_suppose + 20:
+        if player_x_suppose - D_X_FOR_SHOOTING <= self.player.rect.centerx <= player_x_suppose + D_X_FOR_SHOOTING and \
+                player_y_suppose - D_X_FOR_SHOOTING <= self.player.rect.centery <= player_y_suppose + D_X_FOR_SHOOTING:
             self.shoot(enemy)
 
     def move_enemy(self, enemy, ds=DELTA_DISTANCE_FOR_TANK, da=0):
@@ -863,14 +965,14 @@ class GameLevel:
         while self.running:
             if not self.player_is_alive:
                 self.running = False
+            if self.player_won:
+                self.running = False
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.running = False
+                    terminate()
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
                         self.shoot(self.player)
-            # for i in enemies_group:
-            #     self.shoot(i)
             screen.fill(BACKGROUND)
             self.check_pressed()
             self.move_enemies()
@@ -883,11 +985,18 @@ class GameLevel:
             pygame.display.flip()
             clock.tick(FPS)
 
+        if not self.player_is_alive:
+            for i in all_sprites:
+                i.kill()
+            pygame.mouse.set_visible(True)
+            player_lost_screen()
+
+        if not self.player_won:
+            for i in all_sprites:
+                i.kill()
+            pygame.mouse.set_visible(True)
+            player_won_screen()
+
 
 start_screen()
-first_screen = MiddleScreen(screens[0]['title'],
-                            screens[0]['text'],
-                            screens[0]['background'])
-# generate('first_level.txt')
-first_level = GameLevel('first_level.txt')
 terminate()
