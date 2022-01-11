@@ -10,12 +10,11 @@ from pygame_widgets.button import Button
 from math import sin, cos, pi
 from screen_attributes import screens
 
-# from level_generator import generate
+from level_generator import generate
 
 pygame.init()
 
 # constants
-CURRENT_LEVEL = 1
 FPS = 60
 WIDTH = 1080
 HEIGHT = 800
@@ -52,6 +51,7 @@ OBJECTS = {'empty': '.', 'wall': '/', 'enemy': '-', 'player': '@'}
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 pygame.display.set_caption(GAME_TITLE)
+current_level = 0
 
 # music init
 back_sound = pygame.mixer.Sound(file=os.path.join("data", 'sounds', 'hoi4mainthemeallies.wav'))
@@ -116,12 +116,9 @@ BOOM_SHEET = load_image('boom_sheet.png', color_key=-1)
 BULLET_SHEET = load_image('bullet_sheet.png', color_key=-1)
 
 
-def game_process():
-    first_screen = MiddleScreen(screens[0]['title'],
-                                screens[0]['text'],
-                                screens[0]['background'])
-    # generate('first_level.txt')
-    first_level = GameLevel('first_level.txt')
+def game_process(cur_level):
+    new_screen = MiddleScreen(*LEVELS[cur_level][0])
+    new_level = GameLevel(LEVELS[cur_level][1])
 
 
 def break_start_screen():
@@ -146,7 +143,7 @@ won_screen_run = True
 
 # function for start screen
 def start_screen():
-    global start_screen_run
+    global start_screen_run, current_level
     background = pygame.transform.scale(load_image('intro_screen.jpg'), (WIDTH, HEIGHT))
     screen.blit(background, (0, 0))
     logo = pygame.transform.scale(load_image('logo.png', -1), TITLE_SIZE)
@@ -169,11 +166,12 @@ def start_screen():
         clock.tick(FPS)
     start_screen_run = True
     btn.hide()
-    game_process()
+    current_level = 0
+    game_process(current_level)
 
 
 def player_won_screen():
-    global won_screen_run
+    global won_screen_run, current_level
     background = pygame.transform.scale(load_image('won_screen.jpg'), (WIDTH, HEIGHT))
     screen.blit(background, (0, 0))
 
@@ -183,6 +181,29 @@ def player_won_screen():
                  image=load_image('go_forward.jpg'),
                  onClick=break_won_screen
                  )
+
+    # title rendering
+    font_title = pygame.font.Font(None, TITLE_TEXT_FONT_SIZE)
+    title_rendered = font_title.render('ПОБЕДА!', True, TEXT_COLOR)
+    intro_rect = title_rendered.get_rect()
+    intro_rect.centerx = TITLE_TEXT_X
+    intro_rect.top = TITLE_TEXT_TOP
+    screen.fill(TEXT_BG, intro_rect)
+    screen.blit(title_rendered, intro_rect)
+
+    # main text rendering
+    font_text = pygame.font.Font(None, MAIN_TEXT_FONT_SIZE)
+    text_coord = MAIN_TEXT_TOP
+    text = ['Это сражение удалось победить.', 'Вперёд, к следующим битвам.']
+    for line in text:
+        string_rendered = font_text.render(line, True, TEXT_COLOR)
+        intro_rect = string_rendered.get_rect()
+        intro_rect.centerx = MAIN_TEXT_X
+        text_coord += 10
+        intro_rect.top = text_coord
+        text_coord += intro_rect.height
+        screen.fill(TEXT_BG, intro_rect)
+        screen.blit(string_rendered, intro_rect)
 
     while won_screen_run:
         for ev in pygame.event.get():
@@ -194,6 +215,8 @@ def player_won_screen():
         clock.tick(FPS)
     won_screen_run = True
     btn.hide()
+    current_level += 1
+    game_process(current_level)
 
 
 def player_lost_screen():
@@ -998,5 +1021,19 @@ class GameLevel:
             player_won_screen()
 
 
+for i in range(1, 6):
+    generate(f'{i}_level.txt')
+
+
+LEVELS = [[(screens[0]['title'], screens[0]['text'], screens[0]['background']),
+           '1_level.txt'],
+          [(screens[1]['title'], screens[1]['text'], screens[1]['background']),
+           '2_level.txt'],
+          [(screens[2]['title'], screens[2]['text'], screens[2]['background']),
+           '3_level.txt'],
+          [(screens[3]['title'], screens[3]['text'], screens[3]['background']),
+           '4_level.txt'],
+          [(screens[4]['title'], screens[4]['text'], screens[4]['background']),
+           '5_level.txt']]
 start_screen()
 terminate()
