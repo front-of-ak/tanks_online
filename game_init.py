@@ -1012,14 +1012,14 @@ class GameLevel:
             clock.tick(FPS)
 
         if not self.player_is_alive:
-            for i in all_sprites:
-                i.kill()
+            for j in all_sprites:
+                j.kill()
             pygame.mouse.set_visible(True)
             player_lost_screen()
 
         if not self.player_won:
-            for i in all_sprites:
-                i.kill()
+            for j in all_sprites:
+                j.kill()
             pygame.mouse.set_visible(True)
             player_won_screen()
 
