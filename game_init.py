@@ -852,7 +852,10 @@ class GameLevel:
                     (self.player.y <= y <= enemy.y or enemy.y <= y <= self.player.y):
                 can_collide_with_house = True
                 break
-        angle = int(math.atan(a / b) * 180 / pi + 0.5)
+        try:
+            angle = int(math.atan(a / b) * 180 / pi + 0.5)
+        except ZeroDivisionError:
+            angle = 90
         if angle % 2 == 1:
             angle -= 1
 
