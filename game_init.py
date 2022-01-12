@@ -10,7 +10,7 @@ from pygame_widgets.button import Button
 from math import sin, cos, pi
 from screen_attributes import screens
 
-from level_generator import generate
+# from level_generator import generate
 
 pygame.init()
 
@@ -22,6 +22,7 @@ LEVEL_WIDTH, LEVEL_HEIGHT = 27, 20
 TILE_WIDTH = WIDTH / LEVEL_WIDTH
 TILE_HEIGHT = HEIGHT / LEVEL_HEIGHT
 BACKGROUND = pygame.color.Color('white')
+PAUSE_COLOR = pygame.Color(81, 144, 174)
 
 MAIN_TEXT_FONT_SIZE = 32
 TITLE_TEXT_FONT_SIZE = 100
@@ -46,6 +47,18 @@ BOOM_FPS = 60
 RELOAD_TIME = 2
 
 OBJECTS = {'empty': '.', 'wall': '/', 'enemy': '-', 'player': '@'}
+
+LEVELS = [[(screens[0]['title'], screens[0]['text'], screens[0]['background']),
+           '1_level.txt'],
+          [(screens[1]['title'], screens[1]['text'], screens[1]['background']),
+           '2_level.txt'],
+          [(screens[2]['title'], screens[2]['text'], screens[2]['background']),
+           '3_level.txt'],
+          [(screens[3]['title'], screens[3]['text'], screens[3]['background']),
+           '4_level.txt'],
+          [(screens[4]['title'], screens[4]['text'], screens[4]['background']),
+           '5_level.txt']]
+MAX_LEVEL = 5
 
 # screen and clock init
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -116,155 +129,199 @@ BOOM_SHEET = load_image('boom_sheet.png', color_key=-1)
 BULLET_SHEET = load_image('bullet_sheet.png', color_key=-1)
 
 
-def game_process(cur_level):
-    new_screen = MiddleScreen(*LEVELS[cur_level][0])
-    new_level = GameLevel(LEVELS[cur_level][1])
+class Game:
+    def __init__(self):
+        self.won_screen_run = False
+        self.lost_screen_run = False
+        self.start_screen_run = True
+        self.current_level = 0
+        self.game_process()
+
+    def game_process(self):
+        start_screen = StartScreen()
+        while start_screen.is_running():
+            pass
+
+        while self.current_level < MAX_LEVEL:
+            middle_screen = MiddleScreen(*LEVELS[self.current_level][0])
+            while middle_screen.is_running():
+                pass
+            game_level = GameLevel(LEVELS[self.current_level][1])
+            player_won = None
+            while player_won is None:
+                player_won = game_level.is_player_won()
+            pygame.mouse.set_visible(True)
+
+            if player_won:
+                win_or_lose_screen = WonScreen()
+            else:
+                win_or_lose_screen = LoseScreen()
+
+            while win_or_lose_screen.is_running():
+                pass
+
+            self.current_level += 1
+
+        terminate()
 
 
-def break_start_screen():
-    global start_screen_run
-    start_screen_run = False
+class Screen:
+    def __init__(self, background_image):
+        background = pygame.transform.scale(load_image(background_image), (WIDTH, HEIGHT))
+        screen.blit(background, (0, 0))
+        self.running = True
+        self.btn = None
+
+    def screen_loop(self):
+        while self.running:
+            for ev in pygame.event.get():
+                if ev.type == pygame.QUIT:
+                    terminate()
+            events = pygame.event.get()
+            pygame_widgets.update(events)
+            pygame.display.flip()
+            clock.tick(FPS)
+        self.btn.hide()
+
+    def is_running(self):
+        return self.running
+
+    def stop_screen(self):
+        self.running = False
 
 
-def break_lost_screen():
-    global lost_screen_run
-    lost_screen_run = False
+# start screen class
+class StartScreen(Screen):
+    def __init__(self):
+        super().__init__(background_image='intro_screen.jpg')
+        logo = pygame.transform.scale(load_image('logo.png', -1), TITLE_SIZE)
+        screen.blit(logo, (WIDTH // 2 - logo.get_width() // 2, HEIGHT // 4 - logo.get_height()))
+
+        self.btn = Button(screen,
+                          WIDTH // 2 - BUTTON_SIZE[0] // 2, HEIGHT // 2, *BUTTON_SIZE,
+                          radius=BUTTON_RADIUS,
+                          image=load_image('play_btn.jpg'),
+                          onClick=self.stop_screen
+                          )
+
+        self.screen_loop()
 
 
-def break_won_screen():
-    global won_screen_run
-    won_screen_run = False
+class MiddleScreen(Screen):
+    def __init__(self, title, text, background_image):
+        super().__init__(background_image=background_image)
+        self.title = title
+        self.text = text
+        self.render_screen()
 
+        self.btn = Button(screen,
+                          WIDTH // 2 - BUTTON_SIZE[0] // 2, HEIGHT // 3 * 2, *BUTTON_SIZE,
+                          radius=BUTTON_RADIUS,
+                          image=load_image('accept.jpg'),
+                          onClick=self.stop_screen
+                          )
+        self.screen_loop()
 
-start_screen_run = True
-lost_screen_run = True
-won_screen_run = True
-
-
-# function for start screen
-def start_screen():
-    global start_screen_run, current_level
-    background = pygame.transform.scale(load_image('intro_screen.jpg'), (WIDTH, HEIGHT))
-    screen.blit(background, (0, 0))
-    logo = pygame.transform.scale(load_image('logo.png', -1), TITLE_SIZE)
-    screen.blit(logo, (WIDTH // 2 - logo.get_width() // 2, HEIGHT // 4 - logo.get_height()))
-
-    btn = Button(screen,
-                 WIDTH // 2 - BUTTON_SIZE[0] // 2, HEIGHT // 2, *BUTTON_SIZE,
-                 radius=BUTTON_RADIUS,
-                 image=load_image('play_btn.jpg'),
-                 onClick=break_start_screen
-                 )
-
-    while start_screen_run:
-        for ev in pygame.event.get():
-            if ev.type == pygame.QUIT:
-                terminate()
-        events = pygame.event.get()
-        pygame_widgets.update(events)
-        pygame.display.flip()
-        clock.tick(FPS)
-    start_screen_run = True
-    btn.hide()
-    current_level = 0
-    game_process(current_level)
-
-
-def player_won_screen():
-    global won_screen_run, current_level
-    background = pygame.transform.scale(load_image('won_screen.jpg'), (WIDTH, HEIGHT))
-    screen.blit(background, (0, 0))
-
-    btn = Button(screen,
-                 WIDTH // 2 - BUTTON_SIZE[0] // 2, 3 * HEIGHT // 4, *BUTTON_SIZE,
-                 radius=BUTTON_RADIUS,
-                 image=load_image('go_forward.jpg'),
-                 onClick=break_won_screen
-                 )
-
-    # title rendering
-    font_title = pygame.font.Font(None, TITLE_TEXT_FONT_SIZE)
-    title_rendered = font_title.render('ПОБЕДА!', True, TEXT_COLOR)
-    intro_rect = title_rendered.get_rect()
-    intro_rect.centerx = TITLE_TEXT_X
-    intro_rect.top = TITLE_TEXT_TOP
-    screen.fill(TEXT_BG, intro_rect)
-    screen.blit(title_rendered, intro_rect)
-
-    # main text rendering
-    font_text = pygame.font.Font(None, MAIN_TEXT_FONT_SIZE)
-    text_coord = MAIN_TEXT_TOP
-    text = ['Это сражение удалось победить.', 'Вперёд, к следующим битвам.']
-    for line in text:
-        string_rendered = font_text.render(line, True, TEXT_COLOR)
-        intro_rect = string_rendered.get_rect()
-        intro_rect.centerx = MAIN_TEXT_X
-        text_coord += 10
-        intro_rect.top = text_coord
-        text_coord += intro_rect.height
+    def render_screen(self):
+        # title rendering
+        font_title = pygame.font.Font(None, TITLE_TEXT_FONT_SIZE)
+        title_rendered = font_title.render(self.title, True, TEXT_COLOR)
+        intro_rect = title_rendered.get_rect()
+        intro_rect.centerx = TITLE_TEXT_X
+        intro_rect.top = TITLE_TEXT_TOP
         screen.fill(TEXT_BG, intro_rect)
-        screen.blit(string_rendered, intro_rect)
+        screen.blit(title_rendered, intro_rect)
 
-    while won_screen_run:
-        for ev in pygame.event.get():
-            if ev.type == pygame.QUIT:
-                terminate()
-        events = pygame.event.get()
-        pygame_widgets.update(events)
-        pygame.display.flip()
-        clock.tick(FPS)
-    won_screen_run = True
-    btn.hide()
-    current_level += 1
-    game_process(current_level)
+        # main text rendering
+        font_text = pygame.font.Font(None, MAIN_TEXT_FONT_SIZE)
+        text_coord = MAIN_TEXT_TOP
+        for line in self.text:
+            string_rendered = font_text.render(line, True, TEXT_COLOR)
+            intro_rect = string_rendered.get_rect()
+            intro_rect.centerx = MAIN_TEXT_X
+            text_coord += 10
+            intro_rect.top = text_coord
+            text_coord += intro_rect.height
+            screen.fill(TEXT_BG, intro_rect)
+            screen.blit(string_rendered, intro_rect)
 
 
-def player_lost_screen():
-    global lost_screen_run
-    background = pygame.transform.scale(load_image('lost_screen.jpg'), (WIDTH, HEIGHT))
-    screen.blit(background, (0, 0))
+class WonScreen(Screen):
+    def __init__(self):
+        super().__init__(background_image='won_screen.jpg')
 
-    btn = Button(screen,
-                 WIDTH // 2 - BUTTON_SIZE[0] // 2, 3 * HEIGHT // 4, *BUTTON_SIZE,
-                 radius=BUTTON_RADIUS,
-                 image=load_image('back_to_main_menu.jpg'),
-                 onClick=break_lost_screen
-                 )
+        self.btn = Button(screen,
+                          WIDTH // 2 - BUTTON_SIZE[0] // 2, 3 * HEIGHT // 4, *BUTTON_SIZE,
+                          radius=BUTTON_RADIUS,
+                          image=load_image('go_forward.jpg'),
+                          onClick=self.stop_screen
+                          )
 
-    # title rendering
-    font_title = pygame.font.Font(None, TITLE_TEXT_FONT_SIZE)
-    title_rendered = font_title.render('Вы проиграли!', True, TEXT_COLOR)
-    intro_rect = title_rendered.get_rect()
-    intro_rect.centerx = TITLE_TEXT_X
-    intro_rect.top = TITLE_TEXT_TOP
-    screen.fill(TEXT_BG, intro_rect)
-    screen.blit(title_rendered, intro_rect)
+        self.render_screen()
+        self.screen_loop()
 
-    # main text rendering
-    font_text = pygame.font.Font(None, MAIN_TEXT_FONT_SIZE)
-    text_coord = MAIN_TEXT_TOP
-    text = ['Ваша страна понесла невосполнимые потери.', 'Теперь командованию придется репрессировать Вас...']
-    for line in text:
-        string_rendered = font_text.render(line, True, TEXT_COLOR)
-        intro_rect = string_rendered.get_rect()
-        intro_rect.centerx = MAIN_TEXT_X
-        text_coord += 10
-        intro_rect.top = text_coord
-        text_coord += intro_rect.height
+    def render_screen(self):
+        # title rendering
+        font_title = pygame.font.Font(None, TITLE_TEXT_FONT_SIZE)
+        title_rendered = font_title.render('ПОБЕДА!', True, TEXT_COLOR)
+        intro_rect = title_rendered.get_rect()
+        intro_rect.centerx = TITLE_TEXT_X
+        intro_rect.top = TITLE_TEXT_TOP
         screen.fill(TEXT_BG, intro_rect)
-        screen.blit(string_rendered, intro_rect)
+        screen.blit(title_rendered, intro_rect)
 
-    while lost_screen_run:
-        for ev in pygame.event.get():
-            if ev.type == pygame.QUIT:
-                terminate()
-        events = pygame.event.get()
-        pygame_widgets.update(events)
-        pygame.display.flip()
-        clock.tick(FPS)
-    lost_screen_run = True
-    btn.hide()
-    start_screen()
+        # main text rendering
+        font_text = pygame.font.Font(None, MAIN_TEXT_FONT_SIZE)
+        text_coord = MAIN_TEXT_TOP
+        text = ['Это сражение удалось победить.', 'Вперёд, к следующим битвам.']
+        for line in text:
+            string_rendered = font_text.render(line, True, TEXT_COLOR)
+            intro_rect = string_rendered.get_rect()
+            intro_rect.centerx = MAIN_TEXT_X
+            text_coord += 10
+            intro_rect.top = text_coord
+            text_coord += intro_rect.height
+            screen.fill(TEXT_BG, intro_rect)
+            screen.blit(string_rendered, intro_rect)
+
+
+class LoseScreen(Screen):
+    def __init__(self):
+        super().__init__(background_image='lost_screen.jpg')
+
+        self.btn = Button(screen,
+                          WIDTH // 2 - BUTTON_SIZE[0] // 2, 3 * HEIGHT // 4, *BUTTON_SIZE,
+                          radius=BUTTON_RADIUS,
+                          image=load_image('back_to_main_menu.jpg'),
+                          onClick=self.stop_screen
+                          )
+
+        self.render_screen()
+        self.screen_loop()
+
+    def render_screen(self):
+        # title rendering
+        font_title = pygame.font.Font(None, TITLE_TEXT_FONT_SIZE)
+        title_rendered = font_title.render('Вы проиграли!', True, TEXT_COLOR)
+        intro_rect = title_rendered.get_rect()
+        intro_rect.centerx = TITLE_TEXT_X
+        intro_rect.top = TITLE_TEXT_TOP
+        screen.fill(TEXT_BG, intro_rect)
+        screen.blit(title_rendered, intro_rect)
+
+        # main text rendering
+        font_text = pygame.font.Font(None, MAIN_TEXT_FONT_SIZE)
+        text_coord = MAIN_TEXT_TOP
+        text = ['Ваша страна понесла невосполнимые потери.', 'Теперь командованию придется репрессировать Вас...']
+        for line in text:
+            string_rendered = font_text.render(line, True, TEXT_COLOR)
+            intro_rect = string_rendered.get_rect()
+            intro_rect.centerx = MAIN_TEXT_X
+            text_coord += 10
+            intro_rect.top = text_coord
+            text_coord += intro_rect.height
+            screen.fill(TEXT_BG, intro_rect)
+            screen.blit(string_rendered, intro_rect)
 
 
 class Tank(pygame.sprite.Sprite):
@@ -456,62 +513,6 @@ class Boom(pygame.sprite.Sprite):
                 frame_location = (self.rect.w * j, self.rect.h * i)
                 new_image = BOOM_SHEET.subsurface(pygame.Rect(frame_location, self.rect.size))
                 self.frames.append(new_image)
-
-
-class MiddleScreen:
-    def __init__(self, title, text, background_image):
-        self.title = title
-        self.text = text
-        self.background_image = background_image
-        self.render_screen()
-
-        self.button_next = Button(screen,
-                                  WIDTH // 2 - BUTTON_SIZE[0] // 2, HEIGHT // 3 * 2, *BUTTON_SIZE,
-                                  radius=BUTTON_RADIUS,
-                                  image=load_image('accept.jpg'),
-                                  onClick=self.to_level
-                                  )
-
-        self.running = True
-        while self.running:
-            for ev in pygame.event.get():
-                if ev.type == pygame.QUIT:
-                    terminate()
-            events = pygame.event.get()
-            pygame_widgets.update(events)
-            pygame.display.flip()
-            clock.tick(FPS)
-        self.button_next.hide()
-
-    def render_screen(self):
-        # bg rendering
-        background = pygame.transform.scale(load_image(self.background_image), (WIDTH, HEIGHT))
-        screen.blit(background, (0, 0))
-
-        # title rendering
-        font_title = pygame.font.Font(None, TITLE_TEXT_FONT_SIZE)
-        title_rendered = font_title.render(self.title, True, TEXT_COLOR)
-        intro_rect = title_rendered.get_rect()
-        intro_rect.centerx = TITLE_TEXT_X
-        intro_rect.top = TITLE_TEXT_TOP
-        screen.fill(TEXT_BG, intro_rect)
-        screen.blit(title_rendered, intro_rect)
-
-        # main text rendering
-        font_text = pygame.font.Font(None, MAIN_TEXT_FONT_SIZE)
-        text_coord = MAIN_TEXT_TOP
-        for line in self.text:
-            string_rendered = font_text.render(line, True, TEXT_COLOR)
-            intro_rect = string_rendered.get_rect()
-            intro_rect.centerx = MAIN_TEXT_X
-            text_coord += 10
-            intro_rect.top = text_coord
-            text_coord += intro_rect.height
-            screen.fill(TEXT_BG, intro_rect)
-            screen.blit(string_rendered, intro_rect)
-
-    def to_level(self):
-        self.running = False
 
 
 class Tile(pygame.sprite.Sprite):
@@ -711,7 +712,9 @@ class Player(Tank):
 
 class GameLevel:
     def __init__(self, level_file):
-        self.player_won = False
+        self.pause = False
+
+        self.player_won = None
         self.running = True
         self.level_file = level_file
         self.houses = []
@@ -987,6 +990,19 @@ class GameLevel:
         if ds or da:
             self.move_player(ds, da)
 
+    def do_pause(self):
+        pygame.draw.polygon(screen, PAUSE_COLOR,
+                            ((int(WIDTH / 2 - WIDTH / 16), int(HEIGHT / 2 - HEIGHT / 12)),
+                             (int(WIDTH / 2 + WIDTH / 16), int(HEIGHT / 2)),
+                             (int(WIDTH / 2 - WIDTH / 16), int(HEIGHT / 2 + HEIGHT / 12)))
+                            )
+        pygame.draw.polygon(screen, pygame.Color(0, 0, 0),
+                            ((int(WIDTH / 2 - WIDTH / 16), int(HEIGHT / 2 - HEIGHT / 12)),
+                             (int(WIDTH / 2 + WIDTH / 16), int(HEIGHT / 2)),
+                             (int(WIDTH / 2 - WIDTH / 16), int(HEIGHT / 2 + HEIGHT / 12))),
+                            width=2)
+        pygame.display.flip()
+
     def loop(self):
         while self.running:
             if not self.player_is_alive:
@@ -996,47 +1012,44 @@ class GameLevel:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     terminate()
-                if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.type == pygame.MOUSEBUTTONDOWN and not self.pause:
                     if event.button == 1:
                         self.shoot(self.player)
-            screen.fill(BACKGROUND)
-            self.check_pressed()
-            self.move_enemies()
-            all_sprites.draw(screen)
-            enemies_group.draw(screen)
-            player_group.draw(screen)
-            boom_group.draw(screen)
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_SPACE:
+                        if not self.pause:
+                            self.pause = True
+                            self.do_pause()
+                        else:
+                            self.pause = False
+            if not self.pause:
+                screen.fill(BACKGROUND)
+                self.check_pressed()
+                self.move_enemies()
+                all_sprites.draw(screen)
+                enemies_group.draw(screen)
+                player_group.draw(screen)
+                boom_group.draw(screen)
 
-            all_sprites.update()
-            pygame.display.flip()
-            clock.tick(FPS)
+                all_sprites.update()
+                pygame.display.flip()
+                clock.tick(FPS)
 
         if not self.player_is_alive:
             for j in all_sprites:
                 j.kill()
-            pygame.mouse.set_visible(True)
-            player_lost_screen()
+            self.player_won = False
 
         if not self.player_won:
             for j in all_sprites:
                 j.kill()
-            pygame.mouse.set_visible(True)
-            player_won_screen()
+
+    def is_player_won(self):
+        if not self.running:
+            return self.player_won
 
 
-for i in range(1, 6):
-    generate(f'{i}_level.txt')
+# for i in range(1, 6):
+#     generate(f'{i}_level.txt')
 
-
-LEVELS = [[(screens[0]['title'], screens[0]['text'], screens[0]['background']),
-           '1_level.txt'],
-          [(screens[1]['title'], screens[1]['text'], screens[1]['background']),
-           '2_level.txt'],
-          [(screens[2]['title'], screens[2]['text'], screens[2]['background']),
-           '3_level.txt'],
-          [(screens[3]['title'], screens[3]['text'], screens[3]['background']),
-           '4_level.txt'],
-          [(screens[4]['title'], screens[4]['text'], screens[4]['background']),
-           '5_level.txt']]
-start_screen()
-terminate()
+Game()
