@@ -138,11 +138,14 @@ class Game:
         self.game_process()
 
     def game_process(self):
-        start_screen = StartScreen()
-        while start_screen.is_running():
-            pass
-
+        player_won = False
         while self.current_level < MAX_LEVEL:
+            if not player_won:
+                self.current_level = 0
+                start_screen = StartScreen()
+                while start_screen.is_running():
+                    pass
+
             middle_screen = MiddleScreen(*LEVELS[self.current_level][0])
             while middle_screen.is_running():
                 pass
