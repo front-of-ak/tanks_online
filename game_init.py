@@ -1039,11 +1039,13 @@ class GameLevel:
                 clock.tick(FPS)
 
         if not self.player_is_alive:
+            print('q')
             for j in all_sprites:
                 j.kill()
             self.player_won = False
 
-        if not self.player_won:
+        if self.player_won:
+            print('!')
             for j in all_sprites:
                 j.kill()
 
