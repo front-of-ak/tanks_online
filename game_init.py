@@ -46,7 +46,7 @@ NUM_OF_FRAMES = 360 // DELTA_ANGLE
 BOOM_FPS = 60
 RELOAD_TIME = 2
 
-OBJECTS = {'empty': '.', 'wall': '/', 'enemy': '-', 'player': '@'}
+OBJECTS = {'empty': '.', 'wall': '/', 'enemy': '-', 'player': '@', 'stone': '*', 'earth': '&'}
 
 LEVELS = [[(screens[0]['title'], screens[0]['text'], screens[0]['background']),
            '1_level.txt'],
@@ -70,10 +70,11 @@ current_level = 0
 back_sound = pygame.mixer.Sound(file=os.path.join("data", 'sounds', 'hoi4mainthemeallies.wav'))
 shot_sound = pygame.mixer.Sound(file='data/sounds/shot.wav')
 player_tank_dead_sound = pygame.mixer.Sound(file='data/sounds/player_tank_dead.wav')
-penetration_sound = pygame.mixer.Sound(file='data/sounds/penetration.wav')
-no_penetration_sound = pygame.mixer.Sound(file='data/sounds/no_penetration.wav')
+# penetration_sound = pygame.mixer.Sound(file='data/sounds/penetration.wav')
+# no_penetration_sound = pygame.mixer.Sound(file='data/sounds/no_penetration.wav')
 
 shot_sound.set_volume(0.3)
+back_sound.set_volume(0.7)
 back_sound.play(loops=-1, fade_ms=100)
 
 # sprite groups
@@ -116,13 +117,14 @@ def load_image(name, color_key=None):
         image = image.convert_alpha()
     return image
 
-
 TILE_IMAGES = {
     'wall': load_image('house.png'),
-    'empty': load_image('grass.png')
+    'empty': load_image('grass.png'),
+    'stone': load_image('stone.jpg'),
+    'earth': load_image('earth.jpg')
 }
 TANKS_IMAGES = {
-    'player': load_image('tank_sheet.png', -1),
+    'player': load_image('player_tank_sheet.png', -1),
     'enemy': load_image('enemy_tank_sheet.png', -1)
 }
 BOOM_SHEET = load_image('boom_sheet.png', color_key=-1)
@@ -135,37 +137,50 @@ class Game:
         self.lost_screen_run = False
         self.start_screen_run = True
         self.current_level = 0
-        self.game_process()
+        self.screen_process(StartScreen)
 
-    def game_process(self):
-        player_won = False
-        while self.current_level < MAX_LEVEL:
-            if not player_won:
-                self.current_level = 0
-                start_screen = StartScreen()
-                while start_screen.is_running():
-                    pass
-
-            middle_screen = MiddleScreen(*LEVELS[self.current_level][0])
-            while middle_screen.is_running():
-                pass
-            game_level = GameLevel(LEVELS[self.current_level][1])
-            player_won = None
-            while player_won is None:
-                player_won = game_level.is_player_won()
-            pygame.mouse.set_visible(True)
-
-            if player_won:
-                win_or_lose_screen = WonScreen()
-            else:
-                win_or_lose_screen = LoseScreen()
-
-            while win_or_lose_screen.is_running():
-                pass
-
+    def screen_process(self, cur_screen):
+        next_screen = None
+        if cur_screen == WonScreen:
+            cur_screen = WonScreen()
+            next_screen = MiddleScreen
             self.current_level += 1
+        elif cur_screen == LoseScreen:
+            cur_screen = LoseScreen()
+            next_screen = StartScreen
+            self.current_level = 0
+        elif cur_screen == StartScreen:
+            next_screen = MiddleScreen
+            cur_screen = StartScreen()
+        elif cur_screen == MiddleScreen:
+            cur_screen = MiddleScreen(*LEVELS[self.current_level][0])
+            next_screen = GameLevel
 
-        terminate()
+        if self.current_level == MAX_LEVEL:
+            cur_screen = EndScreen()
+            while cur_screen.is_running():
+                pass
+            terminate()
+
+        while cur_screen.is_running():
+            pass
+
+        if next_screen == GameLevel:
+            self.level_process()
+        else:
+            self.screen_process(next_screen)
+
+    def level_process(self):
+        game_level = GameLevel(LEVELS[self.current_level][1])
+        player_won = None
+        while player_won is None:
+            player_won = game_level.is_player_won()
+        pygame.mouse.set_visible(True)
+
+        if player_won:
+            self.screen_process(WonScreen)
+        else:
+            self.screen_process(LoseScreen)
 
 
 class Screen:
@@ -206,6 +221,35 @@ class StartScreen(Screen):
                           image=load_image('play_btn.jpg'),
                           onClick=self.stop_screen
                           )
+
+        self.screen_loop()
+
+
+class EndScreen(Screen):
+    def __init__(self):
+        super().__init__(background_image='end_screen_photo.jpg')
+        title = 'Победа!'
+        text = ['Враг повержен! Победа за нами!']
+        font_title = pygame.font.Font(None, TITLE_TEXT_FONT_SIZE)
+        title_rendered = font_title.render(title, True, TEXT_COLOR)
+        intro_rect = title_rendered.get_rect()
+        intro_rect.centerx = TITLE_TEXT_X
+        intro_rect.top = TITLE_TEXT_TOP
+        screen.fill(TEXT_BG, intro_rect)
+        screen.blit(title_rendered, intro_rect)
+
+        # main text rendering
+        font_text = pygame.font.Font(None, MAIN_TEXT_FONT_SIZE)
+        text_coord = MAIN_TEXT_TOP
+        for line in text:
+            string_rendered = font_text.render(line, True, TEXT_COLOR)
+            intro_rect = string_rendered.get_rect()
+            intro_rect.centerx = MAIN_TEXT_X
+            text_coord += 10
+            intro_rect.top = text_coord
+            text_coord += intro_rect.height
+            screen.fill(TEXT_BG, intro_rect)
+            screen.blit(string_rendered, intro_rect)
 
         self.screen_loop()
 
@@ -276,7 +320,7 @@ class WonScreen(Screen):
         # main text rendering
         font_text = pygame.font.Font(None, MAIN_TEXT_FONT_SIZE)
         text_coord = MAIN_TEXT_TOP
-        text = ['Это сражение удалось победить.', 'Вперёд, к следующим битвам.']
+        text = ['В этом сражении удалось одержать победу.', 'Вперёд, к следующим битвам!']
         for line in text:
             string_rendered = font_text.render(line, True, TEXT_COLOR)
             intro_rect = string_rendered.get_rect()
@@ -315,7 +359,7 @@ class LoseScreen(Screen):
         # main text rendering
         font_text = pygame.font.Font(None, MAIN_TEXT_FONT_SIZE)
         text_coord = MAIN_TEXT_TOP
-        text = ['Ваша страна понесла невосполнимые потери.', 'Теперь командованию придется репрессировать Вас...']
+        text = ['Это сражение выиграть не удалось.', 'Вам придется начать Ваш боевой путь с самого начала...']
         for line in text:
             string_rendered = font_text.render(line, True, TEXT_COLOR)
             intro_rect = string_rendered.get_rect()
@@ -780,6 +824,10 @@ class GameLevel:
                 elif self.map[row][column] == OBJECTS['player']:
                     Tile('empty', column, row)
                     self.player = Player(column, row, self)
+                elif self.map[row][column] == OBJECTS['stone']:
+                    Tile('stone', column, row)
+                elif self.map[row][column] == OBJECTS['earth']:
+                    Tile('earth', column, row)
 
     def move_player(self, ds, da):
         move_up = True
@@ -1025,6 +1073,9 @@ class GameLevel:
                             self.do_pause()
                         else:
                             self.pause = False
+                    if event.key == pygame.K_k:
+                        for j in enemies_group:
+                            j.kill()
             if not self.pause:
                 screen.fill(BACKGROUND)
                 self.check_pressed()
@@ -1039,6 +1090,7 @@ class GameLevel:
                 clock.tick(FPS)
 
         if not self.player_is_alive:
+            player_tank_dead_sound.play(loops=0)
             for j in all_sprites:
                 j.kill()
             self.player_won = False
