@@ -74,7 +74,7 @@ player_tank_dead_sound = pygame.mixer.Sound(file='data/sounds/player_tank_dead.w
 # no_penetration_sound = pygame.mixer.Sound(file='data/sounds/no_penetration.wav')
 
 shot_sound.set_volume(0.3)
-back_sound.set_volume(0.7)
+back_sound.set_volume(0.8)
 back_sound.play(loops=-1, fade_ms=100)
 
 # sprite groups
