@@ -117,6 +117,7 @@ def load_image(name, color_key=None):
         image = image.convert_alpha()
     return image
 
+
 TILE_IMAGES = {
     'wall': load_image('house.png'),
     'empty': load_image('grass.png'),
@@ -155,12 +156,13 @@ class Game:
         elif cur_screen == MiddleScreen:
             cur_screen = MiddleScreen(*LEVELS[self.current_level][0])
             next_screen = GameLevel
+        elif cur_screen == EndScreen:
+            cur_screen = EndScreen()
+            next_screen = StartScreen
 
         if self.current_level == MAX_LEVEL:
-            cur_screen = EndScreen()
-            while cur_screen.is_running():
-                pass
-            terminate()
+            next_screen = EndScreen
+            self.current_level = 0
 
         while cur_screen.is_running():
             pass
@@ -228,6 +230,14 @@ class StartScreen(Screen):
 class EndScreen(Screen):
     def __init__(self):
         super().__init__(background_image='end_screen_photo.jpg')
+
+        self.btn = Button(screen,
+                          WIDTH // 2 - BUTTON_SIZE[0] // 2, HEIGHT // 2, *BUTTON_SIZE,
+                          radius=BUTTON_RADIUS,
+                          image=load_image('back_to_main_menu.jpg'),
+                          onClick=self.stop_screen
+                          )
+
         title = 'Победа!'
         text = ['Враг повержен! Победа за нами!']
         font_title = pygame.font.Font(None, TITLE_TEXT_FONT_SIZE)
