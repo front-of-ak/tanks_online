@@ -1,7 +1,7 @@
-screens = [
+SCREENS = [
     {
         'title': 'Битва за Броды',
-        'text': [' Во время наступления фашистской Германии на СССР в 1941 году на территории',
+        'text': [' Во время наступления нацистской Германии на СССР в 1941 году на территории',
                  'западной Украины схлестнулись советские и немецкие танки.',
                  'Ваша цель:',
                  'уничтожить танки противника и защитить небольшую деревушку, чтобы ',
@@ -41,3 +41,14 @@ screens = [
         'background': 'battle_for_berlin.jpg',
     },
 ]
+
+LEVELS = [[(SCREENS[0]['title'], SCREENS[0]['text'], SCREENS[0]['background']),
+           '1_level.txt'],
+          [(SCREENS[1]['title'], SCREENS[1]['text'], SCREENS[1]['background']),
+           '2_level.txt'],
+          [(SCREENS[2]['title'], SCREENS[2]['text'], SCREENS[2]['background']),
+           '3_level.txt'],
+          [(SCREENS[3]['title'], SCREENS[3]['text'], SCREENS[3]['background']),
+           '4_level.txt'],
+          [(SCREENS[4]['title'], SCREENS[4]['text'], SCREENS[4]['background']),
+           '5_level.txt']]
