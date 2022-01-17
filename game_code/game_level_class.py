@@ -1,17 +1,17 @@
 import math
 import os
-from math import pi, atan
-
 import pygame
 
-from game_code.bullet_and_boom_classes import Bullet, Boom
-from game_code.different_funcs import terminate
-from game_code.sound_init import shot_sound, player_tank_dead_sound
-from game_code.tanks_classes import Enemy, Player
-from game_code.tile_classes import Border, Tile, House
-from game_code.universal_constants import LEVEL_HEIGHT, TILE_HEIGHT, TILE_WIDTH, LEVEL_WIDTH, DELTA_DISTANCE_FOR_TANK, \
+from math import pi, atan
+from bullet_and_boom_classes import Bullet, Boom
+from different_funcs import terminate
+from our_errors import PlayerIsDeadError
+from sound_init import shot_sound, player_tank_dead_sound
+from tanks_classes import Enemy, Player
+from tile_classes import Border, Tile, House
+from universal_constants import LEVEL_HEIGHT, TILE_HEIGHT, TILE_WIDTH, LEVEL_WIDTH, DELTA_DISTANCE_FOR_TANK, \
     DELTA_ANGLE, WIDTH, HEIGHT, FPS
-from game_code.sprite_groups import right_borders_group, bottom_borders_group, left_borders_group, top_borders_group, \
+from sprite_groups import right_borders_group, bottom_borders_group, left_borders_group, top_borders_group, \
     enemies_group, all_sprites, player_group, boom_group
 
 OBJECTS = {'empty': '.', 'wall': '/', 'enemy': '-', 'player': '@', 'stone': '*', 'earth': '&'}
@@ -23,7 +23,7 @@ D_X_FOR_SHOOTING = 15
 
 
 class GameLevel:
-    def __init__(self, screen, clock, level_file):
+    def __init__(self, screen, clock, level_file, prev_music, music_for_this_level):
         self.pause = False
 
         self.screen = screen
@@ -35,6 +35,11 @@ class GameLevel:
         self.houses = []
         self.player = None
         self.player_is_alive = True
+
+        if prev_music != music_for_this_level:
+            prev_music.stop()
+            music_for_this_level.set_volume(0.8)
+            music_for_this_level.play(loops=-1, fade_ms=100)
 
         pygame.mouse.set_visible(False)
 
@@ -289,9 +294,8 @@ class GameLevel:
         if tank.already_reloaded():
             angle, x, y = tank.get_position_and_angle_for_bullet()
             Bullet(self.screen, angle, x, y)
-            if tank == self.player:
-                shot_sound.stop()
-                shot_sound.play(loops=0)
+            shot_sound.stop()
+            shot_sound.play(loops=0)
             tank.reloading()
 
     def check_pressed(self):
@@ -352,7 +356,10 @@ class GameLevel:
                 player_group.draw(self.screen)
                 boom_group.draw(self.screen)
 
-                all_sprites.update()
+                try:
+                    all_sprites.update()
+                except PlayerIsDeadError:
+                    self.player_is_alive = False
                 pygame.display.flip()
                 self.clock.tick(FPS)
 

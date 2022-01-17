@@ -1,8 +1,8 @@
 import pygame
 
-from game_code.universal_constants import TILE_HEIGHT, TILE_WIDTH
-from game_code.different_funcs import load_image
-from game_code.sprite_groups import top_borders_group, left_borders_group, right_borders_group, bottom_borders_group, \
+from universal_constants import TILE_HEIGHT, TILE_WIDTH
+from different_funcs import load_image
+from sprite_groups import top_borders_group, left_borders_group, right_borders_group, bottom_borders_group, \
     all_sprites, houses_group
 
 TILE_IMAGES = {

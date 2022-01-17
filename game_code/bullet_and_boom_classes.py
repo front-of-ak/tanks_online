@@ -1,15 +1,18 @@
-from math import cos, pi, sin
-
 import pygame
 
-from game_code.different_funcs import load_image
-from game_code.universal_constants import WIDTH, HEIGHT, FPS, DELTA_ANGLE, NUM_OF_FRAMES, BOOM_FPS
-from game_code.sprite_groups import all_sprites, bullets_group, houses_group, enemies_group, player_group, boom_group
+from math import cos, pi, sin
+from different_funcs import load_image
+from our_errors import PlayerIsDeadError
+from sound_init import penetration_sound
+from universal_constants import WIDTH, HEIGHT, FPS, DELTA_ANGLE, NUM_OF_FRAMES, BOOM_FPS
+from sprite_groups import all_sprites, bullets_group, houses_group, enemies_group, player_group, boom_group
 
 DELTA_DISTANCE_FOR_BULLET = 12
 
 BOOM_SHEET = load_image('boom_sheet.png', color_key=-1)
 BULLET_SHEET = load_image('bullet_sheet.png', color_key=-1)
+
+BOOM_ROWS, BOOM_COLUMNS = 6, 8
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -28,6 +31,7 @@ class Bullet(pygame.sprite.Sprite):
         self.y = pos_y
 
     def update(self):
+        player_is_dead = False
         self.x += DELTA_DISTANCE_FOR_BULLET * cos(self.angle * pi / 180)
         self.y += -DELTA_DISTANCE_FOR_BULLET * sin(self.angle * pi / 180)
         self.rect.centerx = self.x
@@ -43,16 +47,20 @@ class Bullet(pygame.sprite.Sprite):
         for i in enemies_group:
             if pygame.sprite.collide_mask(self, i):
                 explode = True
+                penetration_sound.stop()
+                penetration_sound.play(loops=0)
                 i.kill()
         for i in player_group:
             if pygame.sprite.collide_mask(self, i):
                 explode = True
                 i.kill()
-                i.game_level.player_is_alive = False  # serious prbl (макс гений инкапсуляция)
+                player_is_dead = True# serious prbl (макс гений инкапсуляция)
 
         if explode:
             Boom(self.x, self.y)
             self.kill()
+            if player_is_dead:
+                raise PlayerIsDeadError
 
     def set_image_using_angle(self, angle):  # getting bullet image from bullet_sheet
         num_of_sprite = (angle // DELTA_ANGLE) % NUM_OF_FRAMES
@@ -63,7 +71,7 @@ class Bullet(pygame.sprite.Sprite):
 
 
 class Boom(pygame.sprite.Sprite):
-    rows, columns, = 6, 8
+    rows, columns, = BOOM_ROWS, BOOM_COLUMNS
 
     def __init__(self, pos_x, pos_y):
         super().__init__(all_sprites, boom_group)

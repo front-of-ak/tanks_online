@@ -1,0 +1,2 @@
+class PlayerIsDeadError(Exception):
+    pass

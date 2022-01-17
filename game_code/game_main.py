@@ -1,27 +1,30 @@
 import pygame
-from game_code.universal_constants import WIDTH, HEIGHT
+
+from universal_constants import WIDTH, HEIGHT
 
 pygame.init()
-
-# window constants
-GAME_TITLE = 'WWII: Величайшие танковые битвы'
 
 # screen and clock init
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
-pygame.display.set_caption(GAME_TITLE)
 
-from game_code.game_level_class import GameLevel
-from game_code.screens import StartScreen, WonScreen, MiddleScreen, LoseScreen, EndScreen
-from game_code.level_attributes import LEVELS
+from sound_init import screens_sound
+from game_level_class import GameLevel
+from screens import StartScreen, WonScreen, MiddleScreen, LoseScreen, EndScreen
+from level_attributes import LEVELS, LEVEL_MUSIC
 
 MAX_LEVEL = 5
+
+# window constants
+GAME_TITLE = 'WWII: Величайшие танковые битвы'
+pygame.display.set_caption(GAME_TITLE)
 
 
 class Game:
     def __init__(self, main_screen, main_clock):
         self.screen = main_screen
         self.clock = main_clock
+        self.prev_music = screens_sound
 
         self.won_screen_run = False
         self.lost_screen_run = False
@@ -32,21 +35,21 @@ class Game:
     def screen_process(self, cur_screen):
         next_screen = None
         if cur_screen == WonScreen:
-            cur_screen = WonScreen(self.screen, self.clock)
+            cur_screen = WonScreen(self.screen, self.clock, self.prev_music)
             next_screen = MiddleScreen
             self.current_level += 1
         elif cur_screen == LoseScreen:
-            cur_screen = LoseScreen(self.screen, self.clock)
+            cur_screen = LoseScreen(self.screen, self.clock, self.prev_music)
             next_screen = StartScreen
             self.current_level = 0
         elif cur_screen == StartScreen:
             next_screen = MiddleScreen
-            cur_screen = StartScreen(self.screen, self.clock)
+            cur_screen = StartScreen(self.screen, self.clock, self.prev_music)
         elif cur_screen == MiddleScreen:
-            cur_screen = MiddleScreen(self.screen, self.clock, *LEVELS[self.current_level][0])
+            cur_screen = MiddleScreen(self.screen, self.clock, self.prev_music, *LEVELS[self.current_level][0])
             next_screen = GameLevel
         elif cur_screen == EndScreen:
-            cur_screen = EndScreen(self.screen, self.clock)
+            cur_screen = EndScreen(self.screen, self.clock, self.prev_music)
             next_screen = StartScreen
 
         if self.current_level == MAX_LEVEL:
@@ -59,10 +62,13 @@ class Game:
         if next_screen == GameLevel:
             self.level_process()
         else:
+            self.prev_music = screens_sound
             self.screen_process(next_screen)
 
     def level_process(self):
-        game_level = GameLevel(self.screen, self.clock, LEVELS[self.current_level][1])
+        game_level = GameLevel(self.screen, self.clock, LEVELS[self.current_level][1], self.prev_music,
+                               LEVEL_MUSIC[self.current_level])
+        self.prev_music = LEVEL_MUSIC[self.current_level]
         player_won = None
         while player_won is None:
             player_won = game_level.is_player_won()

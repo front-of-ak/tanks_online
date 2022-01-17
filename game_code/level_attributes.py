@@ -1,3 +1,5 @@
+from sound_init import fir_level_music, sec_level_music, thi_level_music, for_level_music, fif_level_music
+
 SCREENS = [
     {
         'title': 'Битва за Броды',
@@ -52,3 +54,5 @@ LEVELS = [[(SCREENS[0]['title'], SCREENS[0]['text'], SCREENS[0]['background']),
            '4_level.txt'],
           [(SCREENS[4]['title'], SCREENS[4]['text'], SCREENS[4]['background']),
            '5_level.txt']]
+
+LEVEL_MUSIC = [fir_level_music, sec_level_music, thi_level_music, for_level_music, fif_level_music]

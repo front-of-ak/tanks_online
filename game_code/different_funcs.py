@@ -2,7 +2,7 @@ import os
 import sys
 import pygame
 
-from game_code.universal_constants import TILE_WIDTH, TILE_HEIGHT
+from universal_constants import TILE_WIDTH, TILE_HEIGHT
 
 
 # functions, which are used for loading files

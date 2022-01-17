@@ -2,9 +2,9 @@ import random
 import pygame
 
 from math import pi, cos, sin
-from game_code.different_funcs import position_count, load_image
-from game_code.sprite_groups import enemies_group, player_group, all_sprites
-from game_code.universal_constants import FPS, DELTA_ANGLE, NUM_OF_FRAMES, DELTA_DISTANCE_FOR_TANK
+from different_funcs import position_count, load_image
+from sprite_groups import enemies_group, player_group, all_sprites
+from universal_constants import FPS, DELTA_ANGLE, NUM_OF_FRAMES, DELTA_DISTANCE_FOR_TANK
 
 RELOAD_TIME = 2
 
