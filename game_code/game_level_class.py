@@ -60,7 +60,7 @@ class GameLevel:
         self.loop()
 
     def load_level_map(self):
-        filename = os.path.join("../data", 'level_maps', self.level_file)
+        filename = os.path.join("data", 'level_maps', self.level_file)
         with open(filename) as map_file:
             level_map = [line.strip() for line in map_file]
         max_width = max(map(len, level_map))

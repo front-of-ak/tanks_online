@@ -7,14 +7,14 @@ from universal_constants import TILE_WIDTH, TILE_HEIGHT
 
 # functions, which are used for loading files
 def load_image(name, color_key=None):
-    full_name = os.path.join('../data', 'images', name)
+    full_name = os.path.join('data', 'images', name)
     try:
         image = pygame.image.load(full_name).convert()
     except pygame.error as message:
         print('Cannot load image:', name)
         raise SystemExit(message)
     except FileNotFoundError:
-        full_name = os.path.join('../data', 'images', 'intro_screen.jpg')
+        full_name = os.path.join('data', 'images', 'intro_screen.jpg')
         image = pygame.image.load(full_name).convert()
 
     if color_key is not None:
