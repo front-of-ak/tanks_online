@@ -54,7 +54,7 @@ class Bullet(pygame.sprite.Sprite):
             if pygame.sprite.collide_mask(self, i):
                 explode = True
                 i.kill()
-                player_is_dead = True# serious prbl (макс гений инкапсуляция)
+                player_is_dead = True
 
         if explode:
             Boom(self.x, self.y)

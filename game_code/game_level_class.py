@@ -344,9 +344,6 @@ class GameLevel:
                             self.do_pause()
                         else:
                             self.pause = False
-                    if event.key == pygame.K_k:
-                        for j in enemies_group:
-                            j.kill()
             if not self.pause:
                 self.screen.fill(BACKGROUND)
                 self.check_pressed()
