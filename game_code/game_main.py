@@ -1,3 +1,4 @@
+# version v1.0.0
 import pygame
 
 from universal_constants import WIDTH, HEIGHT
